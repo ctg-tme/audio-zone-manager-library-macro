@@ -20,9 +20,6 @@ or implied.
  *                          Leader, Systems Engineering       Technical Solutions Specialist
  *                          Cisco Systems                     Cisco Systems
  * 
- * Released: November 20, 2023
- * Updated: December 22, 2023
- * 
  * Description:
  *   - Audio Zone Manager (AZM)
  *   - Suite of custom Commands, Statuses and Events that have been
@@ -33,7 +30,9 @@ or implied.
  *     - The Device xAPI
  *     - Audio Configuration Object (Refer to AZM Guide)
  * 
- * Function List
+ * AZM Function List
+ *
+ *  Commands
  *    AZM.Command.Zone.Setup(AudioConfiguration)
  *      - Required. Run at on Script Initialization to apply Audio Configuration
  *    AZM.Command.Zone.Monitor.Start()
@@ -41,11 +40,13 @@ or implied.
  *    AZM.Command.Zone.Monitor.Stop()
  *      - Stops VuMonitoring on configured Audio Inputs
  * 
+ *  Statuses
  *    AZM.Status.Audio.Zone[ZoneId].get()
  *      - Get information on the targeted ZoneId
  *    AZM.Status.Audio.Zone[ZoneId].State.get()
  *      - Get State information on the targeted Zone Id
  * 
+ * Events
  *    AZM.Event.TrackZones.on(event => ...)
  *      - Subscriptions to AZM Zone Events
  *      - Use this to monitor Zone State changes for your solution
@@ -82,7 +83,6 @@ const config_settings_DebugUtil_ZoneDbug = false;
 const config_settings_DebugUtil_EthernetBucketDbug = false;
 const config_settings_DebugUtil_AnalogBucketDbug = false;
 const config_settings_DebugUtil_AdvancedDbug = false;
-
 
 /* 
   Alternative Includes prototype that replaces

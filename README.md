@@ -4,6 +4,9 @@
 
 - The Audio Zone Manager (AZM) is a suite of tools that processes Audio Data coming into your Cisco Codec and provides custom Commands, Statuses and Events for you to build Audio Automations through the devices Macro Editor
 
+| Minimum RoomOs Version | Webex Cloud | Webex Edge (Hybrid Cloud) | On-Premise | Microsoft Teams Room<br>On Cisco Devices |
+|:-----------------------|:------------|:--------------------------|:-----------|:-----------------------------------------|
+| 11.8.X                 | ✅ Yes       | ✅ Yes                    | ✅ Yes     | ❌ No - API Limitation<br>(Dec 9 2023)      | 
 
 ## Table of Contents (ToC)
 - [Before you Start!](#)
@@ -31,12 +34,18 @@
 
 ## Device Requirements
 
-| Minimum RoomOs Version | Webex Cloud | Webex Edge (Hybrid Cloud) | On-Premise | Microsoft Teams Room<br>On Cisco Devices |
-|:-----------------------|:------------|:--------------------------|:-----------|:-----------------------------------------|
-| 11.9.X                 | Yes         | Yes                       | Yes        | No - API Limitation<br>(Dec 9 2023)      | 
+### Minimum RoomOS Software Version
+- RoomOS 11.8.X
 
+### Registration Compatibility
 
-|Tested Codec Models     |
+| Webex Cloud | Webex Edge (Hybrid Cloud) | On-Premise | Microsoft Teams Room<br>On Cisco Devices |
+|:------------|:--------------------------|:-----------|:-----------------------------------------|
+| ✅ Yes       | ✅ Yes                    | ✅ Yes     | ❌ No - API Limitation<br>(Dec 9 2023)      | 
+
+### Tested Codec Models
+
+|Product                 |
 |:-----------------------|
 | Codec Pro              |
 | Codec EQ               |
