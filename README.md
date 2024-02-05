@@ -10,7 +10,7 @@
 |:-----------------------|:------------|:--------------------------|:-----------|:-----------------------------------------|
 | 11.8.X                 | ✅ Yes       | ✅ Yes                    | ✅ Yes     | ❌ No - API Limitation<br>(Dec 9 2023)      | 
 
-## Table of Contents (ToC)
+## Table of Contents
 - [Before you Start!](#before-you-start-)
 - [Device Requirements](#device-requirements-)
 - [AZM Audio Configuration](#azm-audio-configuration-)
@@ -212,15 +212,23 @@ Event Callback
 ## Audio Design Considerations [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 - Refining an Audio Zone in your space requires good control of your physical audio resources
 - It's recommended to use Directional Microphones or a Microphone Array with clearly Defined Zones
-- Audio Zones with too much overlap in their pickup fields will produce false positives in your zones
+- Audio Zones with poorly defined audio separation in their pickup fields will produce false positives in your Audio Zone Automation
 
-Below is an example image of Good Audio placement using the Cisco Table Microphone Pro as the microphone model (Image not to scale)
+Below is an example image of Good Audio placement using the Cisco Table Microphone Pro (Image not to scale)
+- Both Zones A and B have ample separation, thus producing reliable Audio Zone Automation
 
-![Good_Audio_Placement](#)
+[![Good_Audio_Placement](/images/good_microphone_spacing.png)](#)
 
-Here is an example image of Poor Audio Placement, again using the Cisco Table Microphone Pro (Image not to scale)
+Here is an example image of Poor Audio Placement (Image not to scale)
+- Zone's A and B overlap at the center, so any information captured here could lean to either zone, resulting in poor Audio Zone Automation
 
-![Poor_Audio_Placement](#)
+[![Poor_Audio_Placement](/images/poor_microphone_spacing.png)](#)
+
+Here is an example image of Poor Placement, but with a better Audio Configuration applied to the AZM Configuration (Image not to scale)
+- By only including SubIds 3 and 4 for both Microphones defined in Zone A and to only include SubIds 1 and 2 for both Microphones defined in Zone B you can still achieve good separation for reliable automation thus correcting this issue
+- NOTE: Though the AZM Library is ignoring these SubIds for automation, the speech audio from all 4 microphones will still be mixed and sent into the call (unless configured otherwise)
+
+[![Poor_Audio_Placement_Mitigated](/images/poor_microphone_spacing_mitigated.png)](#)
 
 ## TroubleShooting [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 - AZM's base script has a few select logs to print to the console which has meaning for a live deployment
@@ -240,7 +248,7 @@ const config_settings_DebugUtil_AdvancedDbug = false;
 Setting any of the above values to **```true```** will enable more logs to print to the Macro Console
 - To view these logs, you must also enable the Debug log level under the Severity drop down in the Macro Console
 
-![Severity_Screenshot](#)
+[![Severity_Screenshot](/images/macro-editor_severity_toggle.png)](#)
 
 ## Sample Use Cases [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 ### Camera Automation
@@ -256,7 +264,7 @@ Setting any of the above values to **```true```** will enable more logs to print
 
 ## FAQ [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 
-### Is this Macro Supported?
+### Is this Macro Supported by Cisco TAC?
 - No, all Macros are considered Custom Code by Cisco and are not supported.
 
 ### When does a Zone Change State?
@@ -267,7 +275,7 @@ Setting any of the above values to **```true```** will enable more logs to print
   - Unset: This only occurs on setup, when no audio data has been fed into the script. If at least 1 Audio ConnectorId, or SubIds, are Low or High, the Zone is no longer Unset
 
 ### How is the Audio data evaluated?
-- in Version 0.7.0 of the AZM Lib, only the Audio VuMeter data is evaluated
+- The TrackZones Event Subscribes to the Audio VuMeter of your defined microphones
 - This data is packaged into **```"bins"```** that are instantiated in an **```[X]_Bucket```** Class during the Zone Setup process
 - These bins will fill up at a pace that's defined by both your **```Sample Size```** and **```Sample Rate```** value in the AudioConfiguration Object
 - Once a bin matches the **```Sample Size```** value, the data collected is then Averaged and Compared against the **```High```** and **```Low```** thresholds set in the AudioConfiguration Object, then the bin is cleared for the next batch of data
@@ -275,6 +283,5 @@ Setting any of the above values to **```true```** will enable more logs to print
   - Else if the Average is equal to or above the **```Low```** threshold, the connector associated to the incoming data is set to a **```Low```** State
 - The new Connector State is then passed up into the Zone Status, and further compared to the additional connector states within the Zone to determine the Zone State
 
-
 ### Can I edit this Macro?
-- Of Course, it's an Open Script, feel free to edit it to your liking
+- Of Course, it's an Open Script, feel free to fork and edit to your liking
