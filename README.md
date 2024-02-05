@@ -4,35 +4,37 @@
 
 - The Audio Zone Manager (AZM) is a suite of tools that processes Audio Data coming into your Cisco Codec and provides custom Commands, Statuses and Events for you to build Audio Automations through the devices Macro Editor
 
+[![Example Zone Visual](/images/cover_image.png)](#)
+
 | Minimum RoomOs Version | Webex Cloud | Webex Edge (Hybrid Cloud) | On-Premise | Microsoft Teams Room<br>On Cisco Devices |
 |:-----------------------|:------------|:--------------------------|:-----------|:-----------------------------------------|
 | 11.8.X                 | ✅ Yes       | ✅ Yes                    | ✅ Yes     | ❌ No - API Limitation<br>(Dec 9 2023)      | 
 
 ## Table of Contents (ToC)
-- [Before you Start!](#)
-- [Device Requirements](#)
-- [AZM Audio Configuration](#)
-- [AZM Library Reference](#)
+- [Before you Start!](#before-you-start-)
+- [Device Requirements](#device-requirements-)
+- [AZM Audio Configuration](#azm-audio-configuration-)
+- [AZM Library Reference](#azm-library-reference-)
   - [Commands](#)
   - [Statuses](#)
   - [Events](#)
-- [Audio Design Considerations](#)
-- [TroubleShooting](#)
-- [Sample Use Cases](#)
-- [FAQ](#)
+- [Audio Design Considerations](#audio-design-considerations-)
+- [TroubleShooting](#troubleshooting-)
+- [Sample Use Cases](#sample-use-cases-)
+- [FAQ](#faq-)
   - [Is this Macro Supported?](#)
   - [When does a Zone Change State?](#)
   - [How is the Audio data evaluated?](#)
   - [Can I edit this Macro?](#)
-- [Roadmap](#)
-- [ChangeLog](#)
 
-## Before you Start!
+> Press on the Menu Icon to come back to the Table of Contents [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
+
+## Before you Start [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 - Please review this doc in full before jumping in. This is not a plug and play macro, it does require some setup as every space is unique
 - If you have any questions, please refer the FAQ Section at the bottom
 - Please review the Device Requirements below, before loading this into a project
 
-## Device Requirements
+## Device Requirements [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 
 ### Minimum RoomOS Software Version
 - RoomOS 11.8.X
@@ -50,13 +52,13 @@
 | Codec Pro              |
 | Codec EQ               |
 
-## AZM Audio Configuration
+## AZM Audio Configuration [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 - Audio Zone Manager needs to be configured before use
 - Your configurations teach the Macro [To-Do]
 
 - - -
 
-## AZM Library Reference
+## AZM Library Reference [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 
 ### Commands
 
@@ -207,7 +209,7 @@ Event Callback
 
 - - -
 
-## Audio Design Considerations
+## Audio Design Considerations [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 - Refining an Audio Zone in your space requires good control of your physical audio resources
 - It's recommended to use Directional Microphones or a Microphone Array with clearly Defined Zones
 - Audio Zones with too much overlap in their pickup fields will produce false positives in your zones
@@ -220,7 +222,7 @@ Here is an example image of Poor Audio Placement, again using the Cisco Table Mi
 
 ![Poor_Audio_Placement](#)
 
-## TroubleShooting
+## TroubleShooting [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 - AZM's base script has a few select logs to print to the console which has meaning for a live deployment
 - However, there are additional logs you can enable in the AZM library itself you can use to troubleshoot a specific process, should you need too
 - These logs need to be turned on in the AZM_Lib macro, starting on line 84
@@ -240,7 +242,7 @@ Setting any of the above values to **```true```** will enable more logs to print
 
 ![Severity_Screenshot](#)
 
-## Sample Use Cases
+## Sample Use Cases [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 ### Camera Automation
   - Leveraging the Zone States emitted by this script, you can:
     - Switch between different connectors as folks speak in different Audio Zones you define
@@ -252,7 +254,7 @@ Setting any of the above values to **```true```** will enable more logs to print
 ### Screen Layout Automation
   - Leveraging the Zone States emitted by this script, you can alter the layouts of your screens as a speaker transitions between specific Audio Zones
 
-## FAQ
+## FAQ [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 
 ### Is this Macro Supported?
 - No, all Macros are considered Custom Code by Cisco and are not supported.
@@ -276,14 +278,3 @@ Setting any of the above values to **```true```** will enable more logs to print
 
 ### Can I edit this Macro?
 - Of Course, it's an Open Script, feel free to edit it to your liking
-
-## Roadmap
-- USB Microphone Support
-- The ability to Subscribe to an individual Zone's state
-- Ability to pull a list of ZoneIds
-
-## Changelog
-- Version 0.7.0
-  - Initial Release
-  - Support for Ethernet and Analog Microphone Connectors
-  - Logic based on VuMeter Evaluation 
