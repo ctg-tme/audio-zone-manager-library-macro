@@ -29,6 +29,7 @@
   - Can I run 2 different Audio solutions using AZM on the Same Codec?
   - How is the Audio data evaluated?
   - Can I edit this Macro?
+  - Are USB Microphones Supported?
 
 > Press on the Menu Icon to come back to the Table of Contents [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 
@@ -54,6 +55,12 @@
 |:-----------------------|
 | Codec Pro              |
 | Codec EQ               |
+
+### Supported Microphone Types
+- Analog Microphones
+  - Recommend Direction Mics wherever possible
+- Cisco Ethernet Microphones
+- AES67 Microphones
 
 - - -
 
@@ -502,3 +509,6 @@ Setting any of the above values to **```true```** will enable more logs to print
 
 ### Can I edit this Macro?
 - Of Course, it's an Open Script, feel free to fork and edit to your liking
+
+### Are USB Microphones Supported?
+- Currently no, but are on the backlog. Keep an eye out for Macro updates
