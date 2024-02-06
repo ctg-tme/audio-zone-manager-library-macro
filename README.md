@@ -478,6 +478,7 @@ Setting any of the above values to **```true```** will enable more logs to print
   - Learn how to make use of the AZM Functions to start building your own Macros
 - [AZM in the Campfire Blueprint Macro](https://app.vidcast.io/share/15480940-b58c-4375-ad1d-7d34c2455e73)
   - A review on how the Campfire Blueprint Macros utilize the AZM Library
+  - [Campfire Blueprint Macros](https://github.com/cisco-ce/Campfire-Blueprint-Macro/blob/main/readme.MD)
 
 ## FAQ [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 
