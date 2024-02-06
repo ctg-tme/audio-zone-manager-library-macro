@@ -414,18 +414,18 @@ Event Callback
 Below is an example image of Good Audio placement using the Cisco Table Microphone Pro (Image not to scale)
 - Both Zones A and B have ample separation, thus producing reliable Audio Zone Automation
 
-[<img src="/images/good_microphone_spacing.png" align="center" alt="Good Microphone Placement" width="300"/>](#)
+[<img src="/images/good_microphone_spacing.png" alt="Good Microphone Placement" width="300"/>](#)
 
 Here is an example image of Poor Audio Placement (Image not to scale)
 - Zone's A and B overlap at the center, so any information captured here could lean to either zone, resulting in poor Audio Zone Automation
 
-[<img src="/images/poor_microphone_spacing.png" align="center" alt="Poor Microphone Placement" width="300"/>](#)
+[<img src="/images/poor_microphone_spacing.png" alt="Poor Microphone Placement" width="300"/>](#)
 
 Here is an example image of Poor Placement, but with a better Audio Configuration applied to the AZM Configuration (Image not to scale)
 - By only including SubIds 3 and 4 for both Microphones defined in Zone A and to only include SubIds 1 and 2 for both Microphones defined in Zone B you can still achieve good separation for reliable automation thus correcting this issue
 - NOTE: Though the AZM Library is ignoring these SubIds for automation, the speech audio from all 4 microphones will still be mixed and sent into the call (unless configured otherwise)
 
-[<img src="/images/poor_microphone_spacing_mitigated.png" align="center" alt="Poor Microphone Placement Mitigation" width="300"/>](#)
+[<img src="/images/poor_microphone_spacing_mitigated.png" alt="Poor Microphone Placement Mitigation" width="300"/>](#)
 
 ## TroubleShooting [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 - AZM's base script has a few select logs to print to the console which has meaning for a live deployment
@@ -445,7 +445,9 @@ const config_settings_DebugUtil_AdvancedDbug = false;
 Setting any of the above values to **```true```** will enable more logs to print to the Macro Console
 - To view these logs, you must also enable the Debug log level under the Severity drop down in the Macro Console
 
-[<img src="/images/macro-editor_severity_toggle.png" align="center" alt="Macro Editor Severity Dropdown" width="300"/>](#)
+<p align="center">
+  [<img src="/images/macro-editor_severity_toggle.png" alt="Macro Editor Severity Dropdown" width="300"/>](#)
+</p>
 
 ## Sample Use Cases [<img src="/images/view-list-circle_100_w.png" align="center" alt="table of contents" width="25"/>](#table-of-contents)
 ### Camera Automation
