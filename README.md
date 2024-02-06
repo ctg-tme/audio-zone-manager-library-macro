@@ -445,9 +445,9 @@ const config_settings_DebugUtil_AdvancedDbug = false;
 Setting any of the above values to **```true```** will enable more logs to print to the Macro Console
 - To view these logs, you must also enable the Debug log level under the Severity drop down in the Macro Console
 
-<p align="center">
-  [<img src="/images/macro-editor_severity_toggle.png" alt="Macro Editor Severity Dropdown" width="300"/>](#)
-</p>
+[<p align="center">
+  <img src="/images/macro-editor_severity_toggle.png" alt="Macro Editor Severity Dropdown" width="300"/>
+</p>](#)
 
 ## Sample Use Cases [<img src="/images/view-list-circle_100_w.png" align="center" alt="table of contents" width="25"/>](#table-of-contents)
 ### Camera Automation
