@@ -461,15 +461,15 @@ Setting any of the above values to **```true```** will enable more logs to print
 
 ## Tutorial Videos [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 
-- [Analog Microphone Configuration Guide](#)
+- [Analog Microphone Configuration Guide](https://app.vidcast.io/share/03fb6500-6131-44d2-b37b-47e9da6053f3)
   - Learn how to configure the AZM Library for use with Analog Microphones
-- [Cisco Ethernet Microphone Configuration Guide](#)
+- [Cisco Ethernet Microphone Configuration Guide](https://app.vidcast.io/share/147aebe0-19c9-4862-a387-bf549700d5d3)
   - Learn how to configure the AZM Library for use with Cisco Ethernet Microphones
-- [AES67 Microphone Configuration Guide](#)
+- [AES67 Microphone Configuration Guide](https://app.vidcast.io/share/6c3adf3c-81d8-432c-9069-ee8b87130443)
   - Learn how to configure the AZM Library for use with AES67 Microphones
-- [AZM Macro Tutorial](#)
+- [AZM Macro Tutorial](https://app.vidcast.io/share/3d7214f7-667f-47ad-9cdb-7aa19d84d503)
   - Learn how to make use of the AZM Functions to start building your own Macros
-- [AZM in the Campfire Blueprint Macro](#)
+- [AZM in the Campfire Blueprint Macro](https://app.vidcast.io/share/15480940-b58c-4375-ad1d-7d34c2455e73)
   - A review on how the Campfire Blueprint Macros utilize the AZM Library
 
 ## FAQ [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
