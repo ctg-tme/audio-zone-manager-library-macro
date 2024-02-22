@@ -15,9 +15,9 @@
 - [Device Requirements](#device-requirements-)
 - [AZM Audio Configuration](#azm-audio-configuration-)
 - [AZM Library Reference](#azm-library-reference-)
-  - [Commands](#)
-  - [Statuses](#)
-  - [Events](#)
+  - Commands
+  - Statuses
+  - Events
 - [Audio Design Considerations](#audio-design-considerations-)
 - [TroubleShooting](#troubleshooting-)
 - [Click for Sample Code Cases](#sample-use-cases-)
