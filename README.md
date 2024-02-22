@@ -20,7 +20,7 @@
   - [Events](#)
 - [Audio Design Considerations](#audio-design-considerations-)
 - [TroubleShooting](#troubleshooting-)
-- [Sample Use Cases](#sample-use-cases-)
+- [Click for Sample Code Cases](#sample-use-cases-)
 - [Tutorial Videos](#tutorial-videos-)
 - [FAQ](#faq-)
   - Is this Macro Supported?
@@ -111,305 +111,404 @@ const AZM_Audio_Configuration = {
 }
 ```
 
-#### AZM_Audio_Configuration.Settings.Sample.Size
+**_Click on a Path Below to learn more about its properties_**
 
-> Description: The Sample Size refers to how many VuMeter samples the AZM Library connects across all microphone connectors before determining the Audio Zone's state
+<details>
+<summary><strong>AZM_Audio_Configuration.Settings.Sample.Size</strong></summary>
+<br>
+  <blockquote>Description: The Sample Size refers to how many VuMeter samples the AZM Library connects across all microphone connectors before determining the Audio Zone's state</blockquote>
+  <ul>
+    <li>Default Value: 4</li>
+    <li>Accepted Values: Any non-negative, non-zero, whole integer</li>
+    <li>DataType: Integer</li>
+    <li>Required: Yes</li>
+    <li>Value Definitions: N/A</li>
+    <li><strong>Note</strong>: This value effects the performance and speed of the Audio Zone Status</li>
+  </ul>
+</details>
 
-- **Default Value**: 4
-- **Accepted Values**: Any non-negative, non-zero, whole integer
-- **DataType**: Integer
-- **Required**: Yes
-- **Value Definitions**:
-  - NOTE: This value effects the performance and speed of the Audio Zone Status
+<details>
+<summary><strong>AZM_Audio_Configuration.Settings.Sample.Rate</strong></summary>
+<br>
+  <blockquote>Description: The Sample Rate refers to how often a VuMeter sampled by the AZM is collected in milliseconds across all microphone connectors</blockquote>
+  <ul>
+    <li>Default Value: 500</li>
+    <li>Accepted Values: 10 to 1000</li>
+    <li>DataType: Integer</li>
+    <li>Required: Yes</li>
+    <li>Value Definitions: N/A</li>
+    <li><strong>Note</strong>: This value affects the performance and speed of the Audio Zone Status</li>
+  </ul>
+</details>
 
-#### AZM_Audio_Configuration.Settings.Sample.Rate
+<details>
+<summary><strong>AZM_Audio_Configuration.Settings.GlobalThreshold.Mode</strong></summary>
+<br>
+  <blockquote>Description: Choose how you want audio thresholds handled in your space</blockquote>
+  <ul>
+    <li>Default Value: 'On'</li>
+    <li>Accepted Values: ['On', 'Off']</li>
+    <li>DataType: String</li>
+    <li>Required: Yes</li>
+    <li>Value Definitions: N/A</li>
+  </ul>
+</details>
 
-> Description: The Sample Rate refers to how often a VuMeter sampled by the AZM is collected in milliseconds across all microphone connectors
+<details>
+<summary><strong>AZM_Audio_Configuration.Settings.GlobalThreshold.High</strong></summary>
+<br>
+  <blockquote>Description: The High threshold defined for all microphone connectors. Any Audio Zone that is greater than or equal too this value will transition to a _High_ state</blockquote>
+  <ul>
+    <li>Default Value: 25</li>
+    <li>Accepted Values: 1 to 60</li>
+    <li>DataType: Integer</li>
+    <li>Required: Yes</li>
+    <li>Value Definitions: N/A</li>
+    <li><strong>Note</strong>: The High threshold should have a value greater than the Low threshold</li>
+  </ul>
+</details>
 
-- **Default Value**: 500
-- **Accepted Values**: 10 to 1000
-- **DataType**: Integer
-- **Required**: Yes
-- **Value Definitions**:
-  - NOTE: This value effects the performance and speed of the Audio Zone Status
+<details>
+<summary><strong>AZM_Audio_Configuration.Settings.GlobalThreshold.Low</strong></summary>
+<br>
+  <blockquote>Description: The High threshold defined for all microphone connectors. Any Audio Zone that is lesser than or equal too this value will transition to a _Low_ state</blockquote>
+  <ul>
+    <li>Default Value: 15</li>
+    <li>Accepted Values: 1 to 60</li>
+    <li>DataType: Integer</li>
+    <li>Required: Yes</li>
+    <li>Value Definitions: N/A</li>
+    <li><strong>Note</strong>: The Low threshold should have a value lesser than the High threshold</li>
+  </ul>
+</details>
 
-#### AZM_Audio_Configuration.Settings.GlobalThreshold.Mode
+<details>
+<summary><strong>AZM_Audio_Configuration.Zones[{Array}]</strong></summary>
+<br>
+  <blockquote><strong>Note</strong>: The Zones nested values contain multiple blocks of similar properties. Below will cover all nested properties, but not all values belong to each connector type. You will need 4 Zones total for the Campfire Blueprint.</blockquote>
+  <blockquote><strong>Warning</strong>: It's best practice _NOT to mix Analog and Ethernet Microphones_ due to latency between the two microphone types. Please choose 1 microphone type for your room design, follow the format for that microphone type listed below.</blockquote>
 
-> Description: Choose how you want audio thresholds handled in your space
+  <details>
+  <summary><strong>AZM_Audio_Configuration.Zones[{Array}].Label</strong></summary>
+  <br>
+    <blockquote>Description: A label you can assign to the zone. This is used to identify zones in your space.</blockquote>
+    <ul>
+      <li>Default Value: 'Zone_N'</li>
+      <li>Accepted Values: String</li>
+      <li>DataType: String</li>
+      <li>Required: No</li>
+      <li>Value Definitions: N/A</li>
+    </ul>
+  </details>
 
-- **Default Value**: 'On'
-- **Accepted Values**: ['On', 'Off']
-- **DataType**: String
-- **Required**: Yes
-- **Value Definitions**:
-  - On: Applies the **AZM_Audio_Configuration.Settings.GlobalThreshold.High/Low** values across all microphone connectors
+  <details>
+  <summary><strong>AZM_Audio_Configuration.Zones[{Array}].Independent_Threshold.High</strong></summary>
+  <br>
+    <blockquote>Description: The High threshold defined for the Zone it's defined within. Any Audio Zone that is greater than or equal too this value will transition to a _High_ state</blockquote>
+    <ul>
+      <li>Default Value: 35</li>
+      <li>Accepted Values: 1-60</li>
+      <li>DataType: Integer</li>
+      <li>Required: No</li>
+      <li>Value Definitions: N/A</li>
+      <li><strong>Note</strong>: The High threshold should have a value greater than the Low threshold</li>
+    </ul>
+  </details>
 
-#### AZM_Audio_Configuration.Settings.GlobalThreshold.High
+  <details>
+  <summary><strong>AZM_Audio_Configuration.Zones[{Array}].Independent_Threshold.Low</strong></summary>
+  <br>
+    <blockquote>Description: The Low threshold defined for the Zone it's defined within. Any Audio Zone that is greater than or equal too this value will transition to a _Low_ state</blockquote>
+    <ul>
+      <li>Default Value: 20</li>
+      <li>Accepted Values: 1-60</li>
+      <li>DataType: Integer</li>
+      <li>Required: No</li>
+      <li>Value Definitions: N/A</li>
+      <li><strong>Note</strong>: The Low threshold should have a value lesser than the High threshold</li>
+    </ul>
+  </details>
 
-> Description: The High threshold defined for all microphone connectors. Any Audio Zone that is greater than or equal too this value will transition to a _High_ state
+  <details>
+  <summary><strong>AZM_Audio_Configuration.Zones[{Array}].MicrophoneAssignment.Connectors[{SubArray}].Serial</strong></summary>
+  <br>
+    <blockquote>Description: For Cisco Ethernet Microphones Only, assign the microphone's Serial address of the Microphone associated with this Zone. This tells the Macro how to find the Connector ID and map the correct audio information to your Zone</blockquote>
+    <ul>
+      <li>Default Value: ''</li>
+      <li>Accepted Values: String</li>
+      <li>DataType: String</li>
+      <li>Required: Only if using Cisco Ethernet Microphones</li>
+      <li>Value Definitions: N/A</li>
+    </ul>
+  </details>
 
-- **Default Value**: 25
-- **Accepted Values**: 1 to 60
-- **DataType**: Integer
-- **Required**: Yes
-- **Value Definitions**:
-  - NOTE: The High threshold should have a value greater than the Low threshold
+  <details>
+  <summary><strong>AZM_Audio_Configuration.Zones[{Array}].MicrophoneAssignment.Connectors[{SubArray}].StreamName</strong></summary>
+  <br>
+    <blockquote>Description: For AES67 Microphones Only, assign the microphone's StreamName of the Microphone associated with this Zone. This tells the Macro how to find the Connector ID and map the correct audio information to your Zone</blockquote>
+    <ul>
+      <li>Default Value: ''</li>
+      <li>Accepted Values: String</li>
+      <li>DataType: String</li>
+      <li>Required: Only if using AES67 Ethernet Microphones</li>
+      <li>Value Definitions: N/A</li>
+    </ul>
+  </details>
 
-#### AZM_Audio_Configuration.Settings.GlobalThreshold.Low
+  <details>
+  <summary><strong>AZM_Audio_Configuration.Zones[{Array}].MicrophoneAssignment.Connectors[{SubArray}].SubId</strong></summary>
+  <br>
+    <blockquote>Description: For Ethernet-based Microphones, these are the SubIds (or media channels) to subscribe to. 3rd party microphones may vary in the number of streams</blockquote>
+    <ul>
+      <li>Default Value: []</li>
+      <li>Accepted Values: [1-8] (Microphone Dependent)</li>
+      <li>DataType: Integer Array</li>
+      <li>Required: Only if using Ethernet-based Microphones</li>
+      <li>Value Definitions: N/A</li>
+      <li><strong>Note</strong>: Not all microphones have multiple SubIds. Many may mix the stream and output 1 channel</li>
+    </ul>
+  </details>
 
-> Description: The High threshold defined for all microphone connectors. Any Audio Zone that is lesser than or equal too this value will transition to a _Low_ state
+  <details>
+  <summary><strong>AZM_Audio_Configuration.Zones[{Array}].MicrophoneAssignment.Connectors[{SubArray}].Id</strong></summary>
+  <br>
+    <blockquote>Description: For Analog Microphones, assign the ConnectorId associated with the Zone. This is the physical connector id found on the codec body</blockquote>
+    <ul>
+      <li>Default Value: 1</li>
+      <li>Accepted Values: 1-N</li>
+      <li>DataType: Integer</li>
+      <li>Required: Only if using Analog Microphones</li>
+      <li>Value Definitions: N/A</li>
+      <li><strong>Note</strong>: Recommended to use Directional Analog Microphones</li>
+    </ul>
+  </details>
 
-- **Default Value**: 15
-- **Accepted Values**: 1 to 60
-- **DataType**: Integer
-- **Required**: Yes
-- **Value Definitions**:
-  - NOTE: The Low threshold should have a value lesser than the High threshold
-
-#### AZM_Audio_Configuration.Zones[{Array}]
-
-> NOTE: The Zones nested values contains multiple blocks of similar properties. Below will cover all nested properties, but not all values belong to each connector type. You will need 4 Zones total for the Campfire Blueprint.
-
-**Warning: It's best practice _NOT to mix Analog and Ethernet Microphones_ due to latency between the to microphone types. Please choose 1 microphone typw for your room design, follow the format for that microphone type listed below.**
-
-##### AZM_Audio_Configuration.Zones[{Array}].Label
-
-> Description: A label you can assign to the zone. This is used to identify zones in your space. 
-
-- **Default Value**: 'Zone_N'
-- **Accepted Values**: String
-- **DataType**: String
-- **Required**: No
-- **Value Definitions**:
-  - N/A
-
-##### AZM_Audio_Configuration.Zones[{Array}].Independent_Threshold.High
-
-> Description: The High threshold defined for the Zone it's defined within. Any Audio Zone that is greater than or equal too this value will transition to a _High_ state
-
-- **Default Value**: 35
-- **Accepted Values**: 1-60
-- **DataType**: Integer
-- **Required**: No
-- **Value Definitions**:
-  - NOTE: The High threshold should have a value greater than the Low threshold
-
-##### AZM_Audio_Configuration.Zones[{Array}].Independent_Threshold.Low
-
-> Description:  The Low threshold defined for the Zone it's defined within. Any Audio Zone that is greater than or equal too this value will transition to a _Low_ state
-
-- **Default Value**: 20
-- **Accepted Values**: 1-60
-- **DataType**: Integer
-- **Required**: No
-- **Value Definitions**:
-  - NOTE: The Low threshold should have a value lesser than the High threshold
-
-##### AZM_Audio_Configuration.Zones[{Array}].MicrophoneAssignment.Connectors[{SubArray}].Serial
-
-> Description: For Cisco Ethernet Microphones Only, assign the microphone's Serial address of the Microphone associated to this Zone. This tells the Macro how to find the Connector ID and map the correct audio information to your Zone
-
-- **Default Value**: ''
-- **Accepted Values**: String
-- **DataType**: String
-- **Required**: Only if using Cisco Ethernet Microphones
-- **Value Definitions**:
-  - N/A
-
-##### AZM_Audio_Configuration.Zones[{Array}].MicrophoneAssignment.Connectors[{SubArray}].StreamName
-
-> Description: For AES67 Microphones Only, assign the microphone's StreamName of the Microphone associated to this Zone.This tells the Macro how to find the Connector ID and map the correct audio information to your Zone
-
-- **Default Value**: ''
-- **Accepted Values**: String
-- **DataType**: String
-- **Required**: Only if using AES67 Ethernet Microphones
-- **Value Definitions**:
-  - N/A
-
-##### AZM_Audio_Configuration.Zones[{Array}].MicrophoneAssignment.Connectors[{SubArray}].SubId
-
-> Description: For Ethernet based Microphones, these are the SubIds (or media channels) to subscribe to. 3rd party microphones may vary in # of streams
-
-- **Default Value**: []
-- **Accepted Values**: [1-8] (Microphone Dependant)
-- **DataType**: Integer Array
-- **Required**: Only if using Ethernet based Microphones
-- **Value Definitions**:
-  - NOTE: Not all microphones have multiple SubIds. Many may mix the stream and output 1 channel
-
-##### AZM_Audio_Configuration.Zones[{Array}].MicrophoneAssignment.Connectors[{SubArray}].Id
-
-> Description: For Analog Microphones, assign the ConnectorId associated to the Zone. This is the physical connector id on the found on the codec body.
-
-- **Default Value**: 1
-- **Accepted Values**: 1-N
-- **DataType**: Integer
-- **Required**: Only if using Analog Microphones
-- **Value Definitions**:
-  - NOTE: Recommended to use Direction Analog Microphones
-
-##### AZM_Audio_Configuration.Zones[{Array}].Assets
-
-> Description: Assign unique objects under Assets to be assigned to this zone. This could contain any nest object for your design
-
-- **Default Value**: {}
-- **Accepted Values**: JSON Object Literal
-- **DataType**: JSON Object Literal
-- **Required**: No
-- **Value Definitions**:
-  - NOTE: Assets may change from project to project
+  <details>
+  <summary><strong>AZM_Audio_Configuration.Zones[{Array}].Assets</strong></summary>
+  <br>
+    <blockquote>Description: Assign unique objects under Assets to be assigned to this zone. This could contain any nested object for your design</blockquote>
+    <ul>
+      <li>Default Value: {}</li>
+      <li>Accepted Values: JSON Object Literal</li>
+      <li>DataType: JSON Object Literal</li>
+      <li>Required: No</li>
+      <li>Value Definitions: N/A</li>
+      <li><strong>Note</strong>: Assets may change from project to project</li>
+    </ul>
+  </details>
+</details>
 
 - - -
 
 ## AZM Library Reference [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 
-### Commands
+### <ins>Commands</ins>
 
-#### AZM.Command.Zone.Setup(AudioConfiguration)
-
-- Description: Initializes all Zones and Audio Input Connectors within the scope of your Project. Review the AZM AudioConfiguration Section of this Guide to learn how to configure
-- Architecture: Asynchronous
-- Required: Yes
-  - **NOTE**: This function should run before accessing all other objects within AZM
-- Parameters: AudioConfiguration
-- Sample Use
-
-```javascript
-import xapi from 'xapi';
-
-//import the Audio Zone Manager Library
-import { AZM } from './AZM_Lib';
-
-//Create you Audio Configuration Object
-const AudioConfiguration = {/* Populate this Object */};
-
-//Define your Script initialization function
-async function init(){
-  await AZM.Command.Zone.Setup(AudioConfiguration);
+<details>
+<summary><strong>AZM.Command.Zone.Setup(AudioConfiguration)</strong></summary>
+<br>
+  <blockquote>Description: Initializes all Zones and Audio Input Connectors within the scope of your Project. Review the AZM AudioConfiguration Section of this Guide to learn how to configure</blockquote>
+  <ul>
+    <li>Architecture: Asynchronous</li>
+    <li>Required: Yes</li>
+    <ul>
+      <li><strong>NOTE</strong>: This function should run before accessing all other objects within AZM</li>
+    </ul>
+    <li>Parameters: AudioConfiguration</li>
+  </ul>
+  <details>
+  <summary><strong>Click for Sample Code</strong><hr></summary>
+  <br>
   
-  //Your Code
-};
-
-//More Code
+  ```javascript
+  import xapi from 'xapi';
+  
+  // Import the Audio Zone Manager Library
+  import { AZM } from './AZM_Lib';
+  
+  // Create your Audio Configuration Object
+  const AudioConfiguration = {/* Populate this Object */};
+  
+  // Define your Script initialization function
+  async function init(){
+    await AZM.Command.Zone.Setup(AudioConfiguration);
+    
+    // Your Code
+  };
+  
+  // More Code
 ```
+<hr>
+ </details>
+</details>
 
-#### AZM.Command.Zone.Monitor.Start()
-- Description: Starts VuMeter sampling on Audio Input connectors defined in AudioConfiguration object.
-  - **NOTE**: Enabling the VuMeter will turn ON the LED light on Cisco Microphones, even if off a call
-- Architecture: Asynchronous
-- Required: No
-- Parameters: N/A
-- Sample Use
-
-```javascript
-xapi.Event.CallSuccessfull.on(async event => {
-  await AZM.Command.Zone.Monitor.Start();
-});
+<details>
+<summary><strong>AZM.Command.Zone.Monitor.Start()</strong></summary>
+<br>
+  <blockquote>Description: Starts VuMeter sampling on Audio Input connectors defined in AudioConfiguration object.</blockquote>
+  <ul>
+    <li>Architecture: Asynchronous</li>
+    <li>Required: No</li>
+    <ul>
+      <li><strong>NOTE</strong>: Enabling the VuMeter will turn ON the LED light on Cisco Microphones, even if off a call</li>
+    </ul>
+    <li>Parameters: N/A</li>
+  </ul>
+  <details>
+  <summary><strong>Click for Sample Code</strong><hr></summary>
+  <br>
+  
+  ```javascript
+  xapi.Event.CallSuccessfull.on(async event => {
+    await AZM.Command.Zone.Monitor.Start();
+  });
 ```
+<hr>
+  </details>
+</details>
 
-#### AZM.Command.Zone.Monitor.Stop()
-- Description: Stops VuMonitoring on configured Audio Inputs
-    - **NOTE**: Disabling the VuMeter will turn OFF the LED light on Cisco Microphones, unless you're connected to a call
-- Architecture: Asynchronous
-- Required: No
-- Parameters: N/A
-- Sample Use
-
-```javascript
-xapi.Event.CallDisconnect.on(async event => {
-  await AZM.Command.Zone.Monitor.Stop();
-});
+<details>
+<summary><strong>AZM.Command.Zone.Monitor.Stop()</strong></summary>
+<br>
+  <blockquote>Description: Stops VuMonitoring on configured Audio Inputs</blockquote>
+  <ul>
+    <li>Architecture: Asynchronous</li>
+    <li>Required: No</li>
+    <ul>
+      <li><strong>NOTE</strong>: Disabling the VuMeter will turn OFF the LED light on Cisco Microphones, unless you're connected to a call</li>
+    </ul>
+    <li>Parameters: N/A</li>
+  </ul>
+  <details>
+  <summary><strong>Click for Sample Code</strong><hr></summary>
+  <br>
+  
+  ```javascript
+  xapi.Event.CallDisconnect.on(async event => {
+    await AZM.Command.Zone.Monitor.Stop();
+  });
 ```
+<hr>
+  </details>
+</details>
 
-### Statuses
+### <ins>Statuses</ins>
 
-#### AZM.Status.Audio.Zone[ZoneId].get()
-- Description: Get information about your zone by ZoneId when 
-  - **NOTE**: ZoneId's are appended to your AudioConfiguration object when AZM.Command.Zone.Setup(AudioConfiguration) has run. ZoneId's are sequential, based on the index of your Audio Zones, starting at 1
-- Architecture: Synchronous
-- Required: No
-- Parameters: N/A
-- Sample Use and Result
+<details>
+<summary><strong>AZM.Status.Audio.Zone[ZoneId].get()</strong></summary>
+<br>
+  <blockquote>Description: Get information about your zone by ZoneId when</blockquote>
+  <ul>
+    <li>Architecture: Synchronous</li>
+    <li>Required: No</li>
+    <ul>
+      <li><strong>NOTE</strong>: ZoneId's are appended to your AudioConfiguration object when AZM.Command.Zone.Setup(AudioConfiguration) has run. ZoneId's are sequential, based on the index of your Audio Zones, starting at 1</li>
+    </ul>
+    <li>Parameters: N/A</li>
+  </ul>
+  <details>
+  <summary><strong>Click for Sample Code and Result</strong><hr></summary>
+  <br>
+  
+  ```javascript
+  console.log(AZM.Status.Audio.Zone[1].get());
 
-```javascript
-console.log(AZM.Status.Audio.Zone[1].get());
-
-/*
-Result
-{ 
-  Id: Integer,                        // The ZoneId you requested
-  Label: String,                      // The ZoneLabel you Provided
-  Connectors: Array,                  // An array of ConnectorIds
-  State: <'Unset', 'High' or 'Low'>   // The State of a Zone
-}
-*/
+  /*
+  Result
+  { 
+    Id: Integer,                        // The ZoneId you requested
+    Label: String,                      // The ZoneLabel you Provided
+    Connectors: Array,                  // An array of ConnectorIds
+    State: <'Unset', 'High' or 'Low'>   // The State of a Zone
+  }
+  */
 ```
+<hr>
+  </details>
+</details>
 
-#### AZM.Status.Audio.Zone[ZoneId].State.get()
-- Description: Get the State of your zone by ZoneId when 
-  - **NOTE**: ZoneId's are appended to your AudioConfiguration object when AZM.Command.Zone.Setup(AudioConfiguration) has run. ZoneId's are sequential, based on the index of your Audio Zones, starting at 1
-- Architecture: Synchronous
-- Required: No
-- Parameters: N/A
-- Sample Use and Result
+<details>
+<summary><strong>AZM.Status.Audio.Zone[ZoneId].State.get()</strong></summary>
+<br>
+  <blockquote>Description: Get the State of your zone by ZoneId when</blockquote>
+  <ul>
+    <li>Architecture: Synchronous</li>
+    <li>Required: No</li>
+    <ul>
+      <li><strong>NOTE</strong>: ZoneId's are appended to your AudioConfiguration object when AZM.Command.Zone.Setup(AudioConfiguration) has run. ZoneId's are sequential, based on the index of your Audio Zones, starting at 1</li>
+    </ul>
+    <li>Parameters: N/A</li>
+  </ul>
+  <details>
+  <summary><strong>Click for Sample Code and Result</strong></summary>
+  <br>
+  
+  ```javascript
+  console.log(AZM.Status.Audio.Zone[1].State.get());
 
-```javascript
-console.log(AZM.Status.Audio.Zone[1].get());
-
-/*
-Result
-'Unset', 'High' or 'Low'              // The State of a Zone
-*/
+  /*
+  Result
+  'Unset', 'High' or 'Low'              // The State of a Zone
+  */
 ```
+<hr>
+  </details>
+</details>
 
-### Events
+### <ins>Events</ins>
 
-#### AZM.Event.TrackZones.on(event => ...)
-- Description: Subscribe to changes to all Zone events defined within your scope. 
-  This event will callback any updates to your zone, even if the update is identical.
-  - **NOTE**: As events come in, AZM.Event.TrackZones.on will update the state in  AZM.Status.Audio.Zone[ZoneId].State.get() and  AZM.Status.Audio.Zone[ZoneId].get()
-- Required: Yes
-- Parameters: event
-- Sample Use and Event Callback
-
-```javascript
-AZM.Event.TrackZones.on(event => {
+<details>
+<summary><strong>AZM.Event.TrackZones.on(event => ...)</strong></summary>
+<br>
+  <blockquote>Description: Subscribe to changes to all Zone events defined within your scope.</blockquote>
+  <ul>
+    <li><strong>NOTE</strong>: As events come in, AZM.Event.TrackZones.on will update the state in AZM.Status.Audio.Zone[ZoneId].State.get() and AZM.Status.Audio.Zone[ZoneId].get()</li>
+    <li>Required: Yes</li>
+    <li>Parameters: event</li>
+  </ul>
+  <details>
+    <summary style="margin-left: 20px; text-decoration: underline;"><strong>Click for Click for Sample Code and Event Callback Details</strong><hr></summary>
+  <br>
+  
+  ```javascript
+  AZM.Event.TrackZones.on(event => {
     console.log(event)
-    //As the events Change a message will show on the OSD indicating the Zone State
+    // As the events Change a message will show on the OSD indicating the Zone State
     xapi.Command.UserInterface.Message.Alert.Display({
       Title: event.Zone.Label,
       Text: `ZoneId: [${event.Zone.Id}] state set to [${event.Zone.State}]<p>Asset: ${event.Assets.toString()}`
     })
   })
-
-/*
-Event Callback
-
-{
-  Zone: {                                   // Information about the Zone that caused the Callback to fire
-    Label: String,                          // The name of the Zone provided in the AudioConfiguration
-    State: <'Unset', 'High' or 'Low'>,      // The current State of the Zone
-    Id: Integer                             // The ZoneId of the newest Zone Callback
-  },
-  Connector: {                              // Information about the Connector/SubId that caused the Callback to fire
-    Type: <'Ethernet', 'AES67', 'Microphone', 'Analog' or 'USB'>, // The Type of Microphone Connector
-    State: <'Unset', 'High' or 'Low'>,      // The current state of this Connector 
-    Id: Integer,                            // The ID of the connector
-    SubId: Integer                          // The SubId responsible for the Callback to fire
-  },
-  Assets: {},                               // Developer Defined Assets to Track
-  DataSet: {                                // The original data processed in the event
-    VuMeter: {                              // Data associated to the VuMeter
-      Average: Integer,                     // The average value of the DataSet
-      Peak: Integer,                        // The Peak Value of the DataSet
-      Sample: Array                         // The raw set of data evaluated
+  
+  /*
+  Event Callback
+  
+  {
+    Zone: {                                   // Information about the Zone that caused the Callback to fire
+      Label: String,                          // The name of the Zone provided in the AudioConfiguration
+      State: <'Unset', 'High' or 'Low'>,      // The current State of the Zone
+      Id: Integer                             // The ZoneId of the newest Zone Callback
+    },
+    Connector: {                              // Information about the Connector/SubId that caused the Callback to fire
+      Type: <'Ethernet', 'AES67', 'Microphone', 'Analog' or 'USB'>, // The Type of Microphone Connector
+      State: <'Unset', 'High' or 'Low'>,      // The current state of this Connector 
+      Id: Integer,                            // The ID of the connector
+      SubId: Integer                          // The SubId responsible for the Callback to fire
+    },
+    Assets: {},                               // Developer Defined Assets to Track
+    DataSet: {                                // The original data processed in the event
+      VuMeter: {                              // Data associated to the VuMeter
+        Average: Integer,                     // The average value of the DataSet
+        Peak: Integer,                        // The Peak Value of the DataSet
+        Sample: Array                         // The raw set of data evaluated
+      }
     }
   }
-}
-
-*/
+  
+  */
 ```
+  </details>
+</details>
 
 - - -
 
@@ -454,7 +553,7 @@ Setting any of the above values to **```true```** will enable more logs to print
 
 [<img src="/images/macro-editor_severity_toggle.png" alt="Macro Editor Severity Dropdown" width="300"/>](#)
 
-## Sample Use Cases [<img src="/images/view-list-circle_100_w.png" align="center" alt="table of contents" width="25"/>](#table-of-contents)
+## Click for Sample Code Cases [<img src="/images/view-list-circle_100_w.png" align="center" alt="table of contents" width="25"/>](#table-of-contents)
 ### Camera Automation
   - Leveraging the Zone States emitted by this script, you can:
     - Switch between different connectors as folks speak in different Audio Zones you define
