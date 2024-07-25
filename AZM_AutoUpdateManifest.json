@@ -1,0 +1,14 @@
+[
+  {
+    "version": "0.7.2",
+    "roomos": "11.8.1.7",
+    "mtrcapable": "untested",
+    "description": "Initial release"
+  },
+  {
+    "version": "0.7.3",
+    "roomos": "11.8.1.7",
+    "mtrcapable": "untested",
+    "description": "Added Automatic update Support"
+  }
+]
