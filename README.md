@@ -8,11 +8,13 @@
 
 | Minimum RoomOs Version | Webex Cloud | Webex Edge (Hybrid Cloud) | On-Premise | Microsoft Teams Room<br>On Cisco Devices |
 |:-----------------------|:------------|:--------------------------|:-----------|:-----------------------------------------|
-| 11.8.X                 | ✅ Yes       | ✅ Yes                    | ✅ Yes     | ❌ No - API Limitation<br>(Dec 9 2023)   | 
+| 11.11.1.9              | ✅ Yes      | ✅ Yes                    | ✅ Yes     | ❌ No - API Limitation<br>(Dec 9 2023)   | 
 
 ## Table of Contents
 - [Before you Start!](#before-you-start-)
+- [Release ChangeLog](#before-you-start-)
 - [Device Requirements](#device-requirements-)
+- [Installation](#installation-)
 - [AZM Audio Configuration](#azm-audio-configuration-)
 - [AZM Library Reference](#azm-library-reference-)
   - Commands
@@ -38,10 +40,34 @@
 - If you have any questions, please refer the FAQ Section at the bottom
 - Please review the Device Requirements below, before loading this into a project
 
+## Release ChangeLog [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
+
+### v0.8.0
+- Minor Release: Added support for AZM_Lib Macro update Process.
+    - New Configs Introduced
+      - **config_AutomaticUpdates_Mode**
+        - Enables Automatic Updates Mode. This is a passive update tool. The macro will check for updates hosted on this repository, but will **NOT** install the new release for you. It's purely meant to notify you :smiley:
+        - Notification can be found in the Macro Console and in the Control Panel UI
+
+        - [![AZM Notifications Macro Console](/images/AZM_Notifications_MacroConsole.png)](#)
+        - [![AZM Notifications Control Panel](/images/AZM_Notifications_ControlPanel.png)](#)
+        - [![AZM Notifications UserInterface](/images/AZM_Notifications_UI.png)](#)
+
+      - **config_AutomaticUpdates_Schedule_Day**
+        - If config_AutomaticUpdates_Mode is not set to **off**, then this is the Day of the Week when the Macro will check for an update
+      - **config_AutomaticUpdates_Schedule_Time**
+        - If config_AutomaticUpdates_Mode is not set to **off**, then this is the Time of Day when the Macro will check for an update
+
+- Minimum RoomOS Updated from 11.8.X to RoomOS 11.11.1.9
+  - This version of AZM leverages the new Control Panel interface to spawn a AZM Notification Panel which was introduced in this version of RoomOS
+
+### v0.7.2
+- Initial Release
+
 ## Device Requirements [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 
 ### Minimum RoomOS Software Version
-- RoomOS 11.8.X
+- RoomOS 11.11.1.9
 
 ### Registration Compatibility
 
@@ -61,6 +87,32 @@
   - Recommend Direction Mics wherever possible
 - Cisco Ethernet Microphones
 - AES67 Microphones
+
+## Installation [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
+
+### Get the Files
+- In the versions folder, find latest version of the Audio Zone Manager Library
+    - NOTE: It's recommended to use the Latest Version available
+- Select the ```AZM_Lib.js``` file and download it's raw file
+  - It is **NOT** recommended to alter the name of the file. The File should be labeled ```AZM_Lib.js```
+  - Altering the Name would require altering the import syntax in your project
+
+### Install via the Web UserInterface
+- Log into the WebUI of the Codec
+- Navigate to Macro Editor
+- Either
+  - Drag and Drop the ```AZM_Lib.js``` file into the Macro UI
+  - Or select ```import from file...``` and select ```AZM_Lib.js``` wherever you save this on your computer
+- Save the ```AZM_Lib``` Macro
+- Do NOT activate ```AZM_Lib```
+  - Activating the ```AZM_Lib``` macro does not harm your device, but it will consume a active macro slot on your device
+  - You have a limit of 10 active macros on any device, whereas the ```AZM_Lib``` is a developer library, it's best to import this library into you main project and activate that project instead
+
+### Install via Webex Control Hub
+- Log into [Webex Control Hub](https://admin.webex.com) with either Admin or Device Admin Privileges
+- Locate your Device in the Devices interface
+- under
+
 
 - - -
 

@@ -72,6 +72,36 @@ import xapi from 'xapi';
 */
 const config_settings_NormalizeEthernetSubIdPayload = true;
 
+/**
+ * Set the Mode for AZM Automatic Updates
+ * 
+ * Periodically reaches out to github to check for updates to the AZM_Lib.
+ * 
+ * @value off(default): disables automatic update checks to AZM Library
+ * @value monitor: If available, will log update details to the console and provides a UI element in the Control Panel notifying the user.
+ * 
+ * @link [Audio Zone Manager Releases](https://github.com/ctg-tme/audio-zone-manager-library-macro/releases)
+ * 
+ * @see config_AutomaticUpdates_Schedule_Day
+ * @see config_AutomaticUpdates_Schedule_Time
+ */
+const config_AutomaticUpdates_Mode = 'monitor';
+
+/**
+ * Set the Day to check for AZM Updates
+ * 
+ * @value String - Acceped Values: "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
+ * @see config_AutomaticUpdates_Schedule_Time
+ */
+const config_AutomaticUpdates_Schedule_Day = 'Sunday';
+/**
+ * Set the Time to check for AZM Updates
+ * 
+ * @value String - Acceped Value: 24hr Format String. Ex: 00:00
+ * @see config_AutomaticUpdates_Schedule_Day
+ */
+const config_AutomaticUpdates_Schedule_Time = '05:00';
+
 /* 
   The following configuration items allows us to isolate areas of 
     interest in the console log when troubleshooting
@@ -122,6 +152,267 @@ Object.prototype.clone = Array.prototype.clone = function () {
   }
 }
 
+/**
+ * The Installed Version of AZM
+ * 
+ * Do NOT alter this value, as it could impact the operation fo the Macro
+ */
+const version = '0.7.2'
+
+/**
+ * Checks the OS of the device to see validate minimum requirements
+ * 
+ * on the device or not
+ * @parameter { String } minimumOs - Numeric RoomOS Number seperated by dots (EX: 11.1.1.0)
+ * @returns boolean
+ */
+async function check4_Minimum_Version_Required(minimumOs) {
+  const reg = /^\D*(?<MAJOR>\d*)\.(?<MINOR>\d*)\.(?<EXTRAVERSION>\d*)\.(?<BUILDID>\d*).*$/i;
+  const minOs = minimumOs;
+  const os = await xapi.Status.SystemUnit.Software.Version.get();
+  const x = (reg.exec(os)).groups;
+  const y = (reg.exec(minOs)).groups;
+  if (parseInt(x.MAJOR) > parseInt(y.MAJOR)) return true;
+  if (parseInt(x.MAJOR) < parseInt(y.MAJOR)) return false;
+  if (parseInt(x.MINOR) > parseInt(y.MINOR)) return true;
+  if (parseInt(x.MINOR) < parseInt(y.MINOR)) return false;
+  if (parseInt(x.EXTRAVERSION) > parseInt(y.EXTRAVERSION)) return true;
+  if (parseInt(x.EXTRAVERSION) < parseInt(y.EXTRAVERSION)) return false;
+  if (parseInt(x.BUILDID) > parseInt(y.BUILDID)) return true;
+  if (parseInt(x.BUILDID) < parseInt(y.BUILDID)) return false;
+  return false;
+}
+
+function Schedule(timeOfDay = '00:00', day, callBack) {
+  const dayToNumber = { "monday": 1, "tuesday": 2, "wednesday": 3, "thursday": 4, "friday": 5, "saturday": 6, "sunday": 7 };
+
+  const [configuredHour, configuredMinute] = timeOfDay.replace('.', ':').split(':');
+
+  const now = new Date();
+  const thisDay = now.getDay();
+
+  const parseNow = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+
+  let difference = parseInt(configuredHour) * 3600 + parseInt(configuredMinute) * 60 - parseNow;
+  if (difference <= 0) {
+    difference += 24 * 3600
+  };
+  return setTimeout(function () {
+    if (thisDay == dayToNumber[day.toLowerCase()]) {
+      const message = { Message: `[${timeOfDay}] Scheduled event fired` }
+      callBack(message)
+    }
+    setTimeout(function () {
+      Schedule(timeOfDay, day, callBack)
+    }, 1000)
+  }, difference * 1000);
+}
+
+const automaticUpdates = {
+  CompareAZMVersion: function (currentVersion, incomingVersion) {
+    const parseVersion = (version) => version.split('.').map(Number);
+
+    const [currentMajor, currentMinor, currentBuild] = parseVersion(currentVersion);
+    const [incomingMajor, incomingMinor, incomingBuild] = parseVersion(incomingVersion);
+
+    if (incomingMajor > currentMajor) {
+      return "Higher";
+    } else if (incomingMajor < currentMajor) {
+      return "Lower";
+    } else if (incomingMinor > currentMinor) {
+      return "Higher";
+    } else if (incomingMinor < currentMinor) {
+      return "Lower";
+    } else if (incomingBuild > currentBuild) {
+      return "Higher";
+    } else if (incomingBuild < currentBuild) {
+      return "Lower";
+    } else {
+      return "Match";
+    }
+  },
+  GetReleaseLocationUrl: function (headers) {
+    const locationHeader = headers.find(header => header.Key === 'location');
+
+    return locationHeader ? locationHeader.Value : null;
+  },
+  StartUpdateProcess: async function () {
+
+    if (config_AutomaticUpdates_Mode.toLowerCase() == 'off') {
+      await removeAZMNotifications()
+      return;
+    } else {
+      await buildAZMNotifications();
+      await updateAZMUpdateStatusUIExtension(`Checking for AZM File Updates...`, '- - -');
+    }
+
+    let newAZMMacro = undefined;
+
+    let manifest = {};
+
+    let releaseFileUrl = {
+      AZM_Lib: '',
+      manifest: ''
+    }
+
+    // First get latest release information from github
+    // Parse the indformation to grab the download URLs for both the AZM Lib and Manifest
+    try {
+      const requestRelease = await xapi.Command.HttpClient.Get({
+        Url: `https://api.github.com/repos/ctg-tme/audio-zone-manager-library-macro/releases/latest`
+      })
+
+      const releaseManifest = JSON.parse(requestRelease.Body);
+
+      releaseManifest.assets.forEach(item => {
+        // Check the name of the asset and assign the URL accordingly
+        switch (item.name) {
+          case 'AZM_Lib.js':
+            releaseFileUrl.AZM_Lib = item.browser_download_url;
+            break;
+          case 'manifest.json':
+            releaseFileUrl.manifest = item.browser_download_url;
+            break;
+          default:
+            break;
+        }
+      });
+    } catch (e) {
+      await updateAZMUpdateStatusUIExtension(`Uh-Oh! Unable to reach Github. Installed Version: v${version}. Check the Macro Console for more information`, '- - -');
+      let err = {
+        Context: `Unable to fetch intial releases URL`,
+        ...e
+      }
+      console.AZM.warn(err)
+    }
+
+    // Then use the manifest Download Link to get the source information into a buffer
+    // Parse the JSON in this file and validate the AZM Version against the Macro, the RoomOS Version against the Device and check for MTR compatibilty
+    try {
+      let request = await xapi.Command.HttpClient.Get({ Url: releaseFileUrl.manifest });
+    } catch (e) {
+      if (parseInt(e.data.StatusCode) == 302) {
+        const rawFileUrl = automaticUpdates.GetReleaseLocationUrl(e.data.Headers)
+        const subRequest = await xapi.Command.HttpClient.Get({
+          Url: rawFileUrl
+        })
+        manifest = JSON.parse(subRequest.Body)
+      } else {
+        await updateAZMUpdateStatusUIExtension(`Uh-Oh! Unable to reach Github. Installed Version: v${version}. Check the Macro Console for more information`, '- - -');
+        let err = {
+        Context: `Unable to fetch manifest URL`,
+        ...e
+      }
+      console.AZM.warn(err)
+      }
+    }
+
+    const isNewAZMVersionAvailable = automaticUpdates.CompareAZMVersion(version, manifest.version)
+    const isRoomOSVersionCompatible = await check4_Minimum_Version_Required(manifest.roomos)
+
+    if (!isRoomOSVersionCompatible) {
+      let msg = `Unable to install new AZM Update. New AZM version [${manifest.version}] requires RoomOS version [${manifest.roomos}] or newer`
+      await updateAZMUpdateStatusUIExtension(msg, manifest.description);
+      return
+    }
+
+    switch (isNewAZMVersionAvailable) {
+      case 'Higher':
+        switch (config_AutomaticUpdates_Mode.toLowerCase()) {
+          // case 'on':
+          //   /*
+          //   Fun Fact :) By mimicking the process above, you can reach out and download a copy of the new AZM Release and append it to a variable
+          //   Then using the following xAPI Commands
+          //   - [xCommand Macros Macro Save](https://roomos.cisco.com/xapi/Command.Macros.Macro.Save/)
+          //   - [xCommand Macros Macro Activate](https://roomos.cisco.com/xapi/Command.Macros.Macro.Activate/)
+          //   - [xCommand Macros Runtime Restart](https://roomos.cisco.com/xapi/Command.Macros.Runtime.Restart/)
+
+          //   You can automatically install the latest release directly from Github!
+
+          //   Just be sure to parse the config that exists in the running version of AZM and merge that into the downloaded copy
+          //   */
+          //   break;
+          case 'monitor': default:
+            await buildAZMNotifications();
+            let msg = `AZM Update Avalaible. Installed Version: v${version} || New Version v${manifest.version}. Go to the AZM Github to grab a copy.`
+            await updateAZMUpdateStatusUIExtension(msg, manifest.description);
+            console.AZM.info(`View the AZM Release -> https://github.com/ctg-tme/audio-zone-manager-library-macro/releases`)
+            console.AZM.info(`Download the Latest AZM Release -> ${releaseFileUrl.AZM_Lib}`)
+            break;
+        }
+        break;
+      case 'Lower':
+        updateAZMUpdateStatusUIExtension(`Installed Version [v${version}] is greater than the one available on github [v${manifest.version}]`, `No Description Available (You might be running an unreleased version or a fork)`);
+        break;
+      case 'Match':
+        await updateAZMUpdateStatusUIExtension(`Installed Version: v${version}. You're up to date!`, manifest.description);
+        break;
+    }
+  }
+}
+
+const azmnotifyPanelId = 'azm_notify';
+
+async function buildAZMNotifications(manualButton = false/*Not Implemented*/) {
+  const xml = `<Extensions>
+  <Panel>
+    <Order>99</Order>
+    <Location>ControlPanel</Location>
+    <Icon>Microphone</Icon>
+    <Name>Audio Zone Manager Notifications</Name>
+    <ActivityType>Custom</ActivityType>
+    <Page>
+      <Name>AZM Notifications</Name>
+      <Row>
+        <Name>Update Status</Name>
+        <Widget>
+          <WidgetId>azm_notify~notifications~UpdateStatus</WidgetId>
+          <Name>Installed Version: v${version}</Name>
+          <Type>Text</Type>
+          <Options>size=4;fontSize=small;align=left</Options>
+        </Widget>
+        ${manualButton ? `<Widget>
+          <WidgetId>azm_notify~notifications~ManualUpdate</WidgetId>
+          <Name>Manual Update</Name>
+          <Type>Button</Type>
+          <Options>size=2</Options>
+        </Widget>` : ''}
+      </Row>
+      <Row>
+        <Name>Update Description</Name>
+        <Widget>
+          <WidgetId>azm_notify~notifications~UpdateDescription</WidgetId>
+          <Name>- - -</Name>
+          <Type>Text</Type>
+          <Options>size=4;fontSize=small;align=left</Options>
+        </Widget>
+      </Row>
+      <PageId>azm_notify~notifications</PageId>
+      <Options/>
+    </Page>
+  </Panel>
+</Extensions>`
+  await xapi.Command.UserInterface.Extensions.Panel.Save({ PanelId: azmnotifyPanelId }, xml)
+}
+
+async function removeAZMNotifications() {
+  await xapi.Command.UserInterface.Extensions.Panel.Remove({ PanelId: azmnotifyPanelId }).catch(e => e)
+}
+
+async function updateAZMUpdateStatusUIExtension(status = '...', description) {
+  console.AZM.warn(status);
+
+  await xapi.Command.UserInterface.Extensions.Widget.SetValue({
+    WidgetId: 'azm_notify~notifications~UpdateStatus',
+    Value: status
+  })
+
+  await xapi.Command.UserInterface.Extensions.Widget.SetValue({
+    WidgetId: 'azm_notify~notifications~UpdateDescription',
+    Value: description
+  })
+}
+
 /* 
   Instantiate AZM Object, later exported
   Mimicking xAPI Path structure, to allow faster learning and improve readability
@@ -161,8 +452,6 @@ console.AZM.ZoneDebug = function (...args) { if (config_settings_DebugUtil_ZoneD
 console.AZM.E_BucketDebug = function (...args) { if (config_settings_DebugUtil_EthernetBucketDbug) { let arr = []; args.forEach(element => { arr.push(element); }); console.debug({ AZM_EthernetBucketDebug: arr }); }; }
 console.AZM.A_BucketDebug = function (...args) { if (config_settings_DebugUtil_AnalogBucketDbug) { let arr = []; args.forEach(element => { arr.push(element); }); console.debug({ AZM_AnalogBucketDebug: arr }); }; }
 console.AZM.AdvDebug = function (...args) { if (config_settings_DebugUtil_AdvancedDbug) { let arr = []; args.forEach(element => { arr.push(element); }); console.debug({ AZM_AdvDebug: arr }); }; }
-
-const version = '0.7.2'
 
 /* 
   Object used to capture/clone Audio Configuration for AZM
@@ -657,8 +946,24 @@ AZM.Command.Zone.Setup = async function (AudioZoneInfo) {
 
   //Set ZoneSetupStatus true, to allow developer access to the libraries tools
   ZoneSetupStatus = true;
+
+  if (config_AutomaticUpdates_Mode.toLocaleLowerCase() != 'off') {
+    console.AZM.log(`AZM Update Checks set to [${config_AutomaticUpdates_Mode}] and will commence every [${config_AutomaticUpdates_Schedule_Day}] at [${config_AutomaticUpdates_Schedule_Time}].`)
+
+    const httpClient = await xapi.Config.HttpClient.get()
+
+    if (httpClient.Mode.toLowerCase() == 'off') {
+      console.AZM.warn(`Enabling HTTPClient Mode for AZM Automatic Updates in order to reach out to Github`);
+      await xapi.Config.HttpClient.Mode.set('On');
+    }
+
+    Schedule(config_AutomaticUpdates_Schedule_Time, config_AutomaticUpdates_Schedule_Day, async () => {
+      await automaticUpdates.StartUpdateProcess();
+    })
+  }
   console.AZM.info(`AZM Ready! Version: ${version}`)
 }
+
 /* 
   This function evaluates the Audio Configuration and
     instantiates all classes needed to track our audio data cleanly

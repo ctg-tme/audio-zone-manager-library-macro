@@ -1,6 +1,6 @@
 {
-  "version": "0.7.2",
-  "roomos": "11.8.1.7",
+  "version": "0.8.0",
+  "roomos": "11.11.1.9",
   "mtrcapable": "untested",
-  "description": "Initial release"
+  "description": "Minor Release: Added support for AZM_Lib Macro update Process. View Documentation on Github for more details."
 }
