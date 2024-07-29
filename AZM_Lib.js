@@ -157,7 +157,7 @@ Object.prototype.clone = Array.prototype.clone = function () {
  * 
  * Do NOT alter this value, as it could impact the operation fo the Macro
  */
-const version = '0.7.2'
+const version = '0.8.0'
 
 /**
  * Checks the OS of the device to see validate minimum requirements
