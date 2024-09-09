@@ -1,6 +1,6 @@
 {
-  "version": "0.8.0",
-  "roomos": "11.11.1.9",
+  "version": "1.0.0",
+  "roomos": "11.16.1.1",
   "mtrcapable": "untested",
-  "description": "Minor Release: Added support for AZM_Lib Macro update Process. View Documentation on Github for more details."
+  "description": "Major Release 🎉! Voice Detection, USB Sources, External Sources, New Audio Processing Methods and More! Check out the Release Note!"
 }
