@@ -68,6 +68,7 @@
 <summary><strong>v1.0.0 (Major Release)</strong></summary>
 <br>
   <ul>
+    <li>Minimum RoomOS Updated from 11.11.1.9 to RoomOS 11.16.1.1</li>
     <li>USB Input Connector Support</li>
     <li>Voice Activity Detection</li>
     <li>Sampling Modes
@@ -149,7 +150,7 @@
 ## Device Requirements [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 
 ### Minimum RoomOS Software Version
-- RoomOS 11.11.1.9
+- RoomOS 11.16.1.1
 
 ### Registration Compatibility
 
