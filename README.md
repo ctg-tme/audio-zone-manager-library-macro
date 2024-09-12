@@ -218,7 +218,7 @@ const AZM_Audio_Configuration = {
   Settings: {                               // Description: The Settings node effects all audio processing by AZM
     Sample: {
       Size: 4,                              // DefaultValue: 4 || AcceptedValue: Integer || Description: Set the sample size for AZM Audio Collection
-      Rate_In_Ms: 500                       // DefaultValue: 500 || AcceptedValue: 10-1000 || Description: Set the sample rate for AZM Audio Collection
+      Rate_In_Ms: 500,                      // DefaultValue: 500 || AcceptedValue: 10-1000 || Description: Set the sample rate for AZM Audio Collection
       Mode: 'Snapshot'                      // DefaultValue: Snapshot || AcceptedValue: <'Snapshot', 'Rolling'> || Description: Determine the profile in which Audio VuMeter data is evaluated
     },
     GlobalThreshold: {
@@ -249,7 +249,7 @@ const AZM_Audio_Configuration = {
         ]
       },
       Assets: {                             // Description: Define any object associated to this Audio Zone. Asset Information will be provided when an Event Fires
-        CustomAsset_1: 'My First Asset',                 // NOTE: Any Objects nested within Assets are defined by You and have no based key or value pairing. This us an example of a custom asset
+        CustomAsset_1: 'My First Asset',    // NOTE: Any Objects nested within Assets are defined by You and have no based key or value pairing. This us an example of a custom asset
         CameraId: 1                         // A more real world example of an Asset
       }
     }
@@ -857,8 +857,20 @@ Setting any of the above values to **```true```** will enable more logs to print
     - This highlights little change between the 2 zones on a single Cisco Mic Pro
     - Now, with that said, it's not blocked, so if you find a successful work-around consider submitting a an Example Audio Configuration to this repository! Collaboration Technology needs collaborators!
 
-## I'm getting errors installing the AZM Library through Webex Control Hub?
-- 
+### Why am I getting errors installing the AZM Library through Webex Control Hub?
+- It's difficult to know without the exact error on hand, but below is an alternative method for Macro Installation via Webex Control Hub you could try
+  - Log into [Webex Control Hub](https://admin.webex.com) with either Admin or Device Admin Privileges
+  - Locate your Codec in the Devices interface
+  - Select All Configurations
+  - Look for and Set [xConfiguration Macros EvaluateTranspiled](https://roomos.cisco.com/xapi/Configuration.Macros.EvaluateTranspiled/) to False on your endpoint
+  - Close the All Configurations Menu
+  - Select Actions > Run xCommand
+  - Look for and Select Macros Macro Save
+    - Set Overwrite to True
+    - Set Transpile to False
+    - Name the macro ```AMZ_Lib```
+    - Set the full AZM_Lib script in the body
+    - Select Run
 
 ### Are USB Microphones Supported?
 - Yes, support for USB Microphones came with the release of the AZM_Lib version 1.0.0
