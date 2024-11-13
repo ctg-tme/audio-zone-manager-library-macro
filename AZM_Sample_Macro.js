@@ -12,13 +12,13 @@ IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
 or implied.
 *********************************************************
 
- * Author(s):               Robert(Bobby) McGonigle Jr
- *                          Technical Marketing Engineering, Technical Leader
- *                          Cisco Systems
- *                          bomcgoni@cisco.com
+ * Author(s):               [Your Name]
+ *                          [Your Title]
+ *                          [Your Organization]
  * 
  * Description:
  *   - This is an Example Macro for the Audio Zone Manager Library (AZM_Lib)
+ *   - This is NOT a full solution
  * 
  * Dependencies
  *   - AZM_Lib Macro installed on Device

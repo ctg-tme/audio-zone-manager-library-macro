@@ -13,12 +13,13 @@ IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
 or implied.
 *********************************************************
 
- * Author(s):               Robert(Bobby) McGonigle Jr
- *                          Technical Marketing Engineering, Technical Leader
- *                          Cisco Systems
+ * Author(s):               [Your Name]
+ *                          [Your Title]
+ *                          [Your Organization]
  * 
  * Description:
  *   - Various examples for mic configurations for the AZM Library
+ *   - Note, this is a Sample Macro, not a full solution
 */
 /**
  * All AZM Setup Config Object have a Settings node and a Zones Node
