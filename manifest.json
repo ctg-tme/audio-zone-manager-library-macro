@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "roomos": "11.16.1.1",
-  "mtrcapable": "untested",
-  "description": "Major Release 🎉! Voice Detection, USB Sources, External Sources, New Audio Processing Methods and More! Check out the Release Note!"
+  "mtrcapable": "Yes as of RoomOS 11.20.X.X",
+  "description": "Minor Release, fixed bug for Ceiling Mice Pro. Special Thanks to Mark Lula for Finding It!"
 }

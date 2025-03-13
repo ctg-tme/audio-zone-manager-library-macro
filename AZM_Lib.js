@@ -1229,7 +1229,10 @@ function Process_BIN_Data(dataset) {
 async function discoverEthernetStreamNameBySerial(serial) {
   const peripherals = await xapi.Status.Peripherals.ConnectedDevice.get()
 
-  const streamName = peripherals.find(item => item.Name.includes('Microphone') && item.SerialNumber === serial);
+  // const streamName = peripherals.find(item => item.Name.includes('Microphone') && item.SerialNumber === serial);
+
+  // Thank you Mark Lula for finding this bug :)
+  const streamName = peripherals.find(item => item.Type === 'AudioMicrophone' && item.SerialNumber === serial);
 
   return streamName ? streamName.ID : null;
 }
@@ -1517,7 +1520,7 @@ function startExternalSubscription(callBack) {
           IncomingPayload: extEvent,
           ...e
         }
-        console.AZM.errror(err)
+        console.AZM.error(err)
       }
     }
   });

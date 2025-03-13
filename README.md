@@ -8,7 +8,7 @@
 
 | Minimum RoomOs Version | Webex Cloud | Webex Edge (Hybrid Cloud) | On-Premise | Microsoft Teams Room<br>On Cisco Devices |
 |:-----------------------|:------------|:--------------------------|:-----------|:-----------------------------------------|
-| 11.16.1.1              | ✅ Yes      | ✅ Yes                    | ✅ Yes     | 🟠 Unknown - Not Tested<br>(Sep 9 2024)   | 
+| 11.16.1.1              | ✅ Yes      | ✅ Yes                    | ✅ Yes     | ✅ Yes (Confirmed Sept. 2024)   | 
 
 ## Table of Contents
 - [Before you Start!](#before-you-start-)
@@ -21,6 +21,7 @@
   - Commands
   - Statuses
   - Events
+- [Sending External[N] Payloads to AZM_Lib](#sending-externalpayloads-to-azm_lib-)
 - [Audio Design Considerations](#audio-design-considerations-)
 - [TroubleShooting](#troubleshooting-)
 - [Use Case Examples](#use-case-examples-)
@@ -724,6 +725,9 @@ const AZM_Audio_Configuration = {
 </details>
 
 - - -
+
+## Sending External[N] Payloads to the AZM_Lib [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
+
 
 ## Audio Design Considerations [<img src="/images/view-list-circle_100_w.png" alt="table of contents" width="25"/>](#table-of-contents)
 - Refining an Audio Zone in your space requires good control of your physical audio resources
