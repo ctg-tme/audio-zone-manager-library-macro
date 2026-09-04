@@ -212,6 +212,8 @@
 - Audio Zone Manager needs to be configured before use
 - Your configurations teach the Macro where your audio resources are listening in relation to the assets you assigned them
 - Though the configuration must be run at the start, you can recall the configuration setup command at any time in the script, should you have a solution that requires zones to be altered, such as a Combine and Divide space
+- Setup replaces the active logical zone arrangement atomically. Existing numeric zone IDs remain compatible, while each zone also reports a stable `StableId` and additive source `Health` (`ready`, `pending`, `unavailable`, or `invalid`).
+- Ethernet sources that are temporarily absent during boot remain `pending` and are retried when RoomOS reports a stream change. Set `Settings.MissingSourcePolicy` to `'unavailable'` when an unresolved source should be explicitly marked unavailable instead.
 
 #### Code View
 ```javascript
@@ -631,14 +633,22 @@ const AZM_Audio_Configuration = {
   Result
   { 
     Id: Integer,                        // The ZoneId you requested
+    StableId: String,                   // Additive logical ID; use an explicit StableId/LogicalId in config when needed
     Label: String,                      // The ZoneLabel you Provided
     Connectors: Array,                  // An array of ConnectorIds
-    State: <'Unset', 'High' or 'Low'>   // The State of a Zone
+    State: <'Unset', 'High' or 'Low'>,  // The State of a Zone
+    Health: <'ready', 'pending', 'unavailable' or 'invalid'>
   }
   */
 ```
 <hr>
   </details>
+</details>
+
+<details>
+<summary><strong>AZM.Status.Audio.Diagnostics</strong></summary>
+<br>
+  <blockquote>Structured diagnostics for unresolved sources, unmatched connector events, external controller mismatches, and event processing failures. The array is replaced with each successful setup so it describes the active runtime graph.</blockquote>
 </details>
 
 <details>

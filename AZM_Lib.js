@@ -158,8 +158,11 @@ const AZM = {
        * 
        * @example AZM.Status.Audio.Zone[N].State.get()
        * @example AZM.Status.Audio.Zone[N].get()
-       */
-      Zone: {}
+      */
+      Zone: {},
+      /** Additive source resolution and runtime diagnostics surface. */
+      Source: {},
+      Diagnostics: []
     }
   },
   Event: {
@@ -197,6 +200,23 @@ const AudioBucket = { Ethernet: {}, Analog: {}, USB: {}, ExternalVuMeter: {}, Ex
  * @see Normalize_Ethernet_Audio_Data()
  */
 let Ethernet_SubId_Backfill = {}
+
+/**
+ * The active runtime graph. Setup builds a replacement graph off to the side
+ * and swaps this reference only after resolution and construction succeed.
+ */
+let activeRuntime = null;
+
+/** One callback set and one subscription per RoomOS event family. */
+const trackZoneCallbacks = new Set();
+const eventSubscriptions = {
+  Ethernet: false,
+  Microphone: false,
+  USBMicrophone: false,
+  MessageSend: false,
+  VoiceActivity: false,
+  EthernetStreamName: false
+};
 
 /**
  * Object used to store AZM Configuration
@@ -314,18 +334,19 @@ class AZM_Error extends Error {
  * The Assets associated to the zone
 */
 class Zone_Tracker {
-  constructor(zoneId, zoneLabel, zoneType, assets) {
+  constructor(zoneId, zoneLabel, zoneType, assets, stableId) {
     this._ZoneId = zoneId;
     this._Label = zoneLabel;
     this._Connectors = [];
     this._State = 'Unset';
     this._ZoneType = zoneType;
     this._Assets = assets;
+    this._StableId = stableId;
     console.AZM.ZonesDebug(`New [${this._ZoneType}] Zone instantiated || ZoneId: [${this._ZoneId}]`)
   }
-  addConnector(connectorId, state, zoneId) {
+  addConnector(connectorId, state, zoneId, source = {}) {
     if (zoneId == this._ZoneId) {
-      this._Connectors.push({ ConnectorId: connectorId, State: state })
+      this._Connectors.push({ ConnectorId: connectorId, State: state, ...source })
       console.AZM.ZonesDebug(`ConnectorId [${connectorId}] added || ZoneId: [${this._ZoneId}]`)
     }
   }
@@ -377,7 +398,23 @@ class Zone_Tracker {
   get() {
     checkZoneSetup(`Unable to request Zone information from ZoneId: [${this._ZoneId}]`)
     this._State = this.State.get()
-    return { Id: this._ZoneId, Label: this._Label, Type: this._ZoneType, Connectors: this._Connectors, State: this._State }
+    const sourceHealth = this._Connectors.map(item => item.SourceHealth).filter(Boolean);
+    const health = sourceHealth.some(item => item === 'invalid')
+      ? 'invalid'
+      : sourceHealth.some(item => item === 'unavailable')
+        ? 'unavailable'
+        : sourceHealth.some(item => item === 'pending')
+          ? 'pending'
+          : 'ready';
+    return {
+      Id: this._ZoneId,
+      StableId: this._StableId,
+      Label: this._Label,
+      Type: this._ZoneType,
+      Connectors: this._Connectors,
+      State: this._State,
+      Health: health
+    }
   }
 }
 
@@ -455,6 +492,7 @@ class Base_AudioBucket {
       console.AZM[`${this.audioConnectorType}_BucketDebug`](`VuMeter Bin [${this.audioConnectorType}] ConnectorId [${this.ConnectorId}] State set [${this.State}] || ZoneId: [${this.ZoneId}]`)
 
       AZM.Status.Audio.Zone[this.ZoneId].setConnectorState(this.ConnectorId, this.State, this.ZoneId).then(() => {
+        if (!bucketIsActive(this)) return;
         const payload = {
           Zone: {
             Label: this.Label,
@@ -483,10 +521,10 @@ class Base_AudioBucket {
  * @see AZM.Command.Zone.Setup()
  */
 class Analog_Bucket extends Base_AudioBucket {
-  constructor(connectorId, zoneId, zoneLabel, assets) {
+  constructor(connectorId, zoneId, zoneLabel, assets, configuration = AudioConfiguration) {
     super(connectorId, zoneId, zoneLabel, assets);
     this.audioConnectorType = 'Analog';
-    this.thresholds = setBucketAudioThresholds(this.ZoneId, AudioConfiguration, this.audioConnectorType)
+    this.thresholds = setBucketAudioThresholds(this.ZoneId, configuration, this.audioConnectorType)
     console.AZM[`${this.audioConnectorType}_BucketDebug`](`New [${this.audioConnectorType}] Bucket instantiated for the [${this.Label}] Zone || Bucket: [Connector: ${this.ConnectorId} || ZoneId: [${this.ZoneId}]`)
   }
 }
@@ -500,10 +538,10 @@ class Analog_Bucket extends Base_AudioBucket {
  * @see AZM.Command.Zone.Setup()
  */
 class USB_Bucket extends Base_AudioBucket {
-  constructor(connectorId, zoneId, zoneLabel, assets) {
+  constructor(connectorId, zoneId, zoneLabel, assets, configuration = AudioConfiguration) {
     super(connectorId, zoneId, zoneLabel, assets)
     this.audioConnectorType = 'USB'
-    this.thresholds = setBucketAudioThresholds(this.ZoneId, AudioConfiguration, this.audioConnectorType)
+    this.thresholds = setBucketAudioThresholds(this.ZoneId, configuration, this.audioConnectorType)
     console.AZM[`${this.audioConnectorType}_BucketDebug`](`New [${this.audioConnectorType}] Bucket instantiated for the [${this.Label}] Zone || Bucket: [Connector: ${this.ConnectorId} || ZoneId: [${this.ZoneId}]`)
   }
 }
@@ -520,10 +558,10 @@ class USB_Bucket extends Base_AudioBucket {
  * @method ```setSubIdProperties``` instantiates bins for each SubId for independent tracking and Processing of each Ethernet SubID
  */
 class Ethernet_Bucket extends Base_AudioBucket {
-  constructor(connectorId, connectorSubId, zoneId, zoneLabel, assets) {
+  constructor(connectorId, connectorSubId, zoneId, zoneLabel, assets, configuration = AudioConfiguration) {
     super(connectorId, zoneId, zoneLabel, assets)
     this.audioConnectorType = 'Ethernet'
-    this.thresholds = setBucketAudioThresholds(this.ZoneId, AudioConfiguration, this.audioConnectorType)
+    this.thresholds = setBucketAudioThresholds(this.ZoneId, configuration, this.audioConnectorType)
     this.ConnectorSubIds = connectorSubId;
     this.SubStates = {};
     this.bin = this.setSubIdProperties();
@@ -545,7 +583,7 @@ class Ethernet_Bucket extends Base_AudioBucket {
 
   run(data, callback) {
     data.SubId.forEach(subElement => {
-      if (this.ConnectorSubIds.includish(subElement.id)) {
+      if (this.ConnectorSubIds.some(configuredSubId => configuredSubId == subElement.id)) {
         this.bin[subElement.id].VuMeter.push(subElement.VuMeter);
         this.bin[subElement.id].PPMeter.push(subElement.PPMeter);
         this.bin[subElement.id].NoiseLevel.push(subElement.NoiseLevel);
@@ -621,6 +659,7 @@ class Ethernet_Bucket extends Base_AudioBucket {
           console.AZM[`${this.audioConnectorType}_BucketDebug`](`VuMeter Bin [${this.audioConnectorType}] ConnectorId [${this.ConnectorId}] State set [${this.State}] || ZoneId: [${this.ZoneId}]`)
 
           AZM.Status.Audio.Zone[this.ZoneId].setConnectorState(this.ConnectorId, this.State, this.ZoneId).then(() => {
+            if (!bucketIsActive(this)) return;
             const payload = {
               Zone: {
                 Label: this.Label,
@@ -653,12 +692,12 @@ class Ethernet_Bucket extends Base_AudioBucket {
  * @see AZM.Command.Zone.Setup()
  */
 class ExternalVuMeter_Bucket extends Base_AudioBucket {
-  constructor(connectorId, zoneId, zoneLabel, assets, controllerId) {
+  constructor(connectorId, zoneId, zoneLabel, assets, controllerId, configuration = AudioConfiguration) {
     super(connectorId, zoneId, zoneLabel, assets)
     this.ControllerId = controllerId
     this.bin = { VuMeter: [] };
     this.audioConnectorType = 'ExternalVuMeter'
-    this.thresholds = setBucketAudioThresholds(this.ZoneId, AudioConfiguration, this.audioConnectorType)
+    this.thresholds = setBucketAudioThresholds(this.ZoneId, configuration, this.audioConnectorType)
     console.AZM[`${this.audioConnectorType}_BucketDebug`](`New [${this.audioConnectorType}] Bucket instantiated for the [${this.Label}] Zone || Bucket: [Connector: ${this.ConnectorId} || ZoneId: [${this.ZoneId}]`)
   }
 
@@ -702,6 +741,7 @@ class ExternalVuMeter_Bucket extends Base_AudioBucket {
       console.AZM[`${this.audioConnectorType}_BucketDebug`](`VuMeter Bin [${this.audioConnectorType}] ConnectorId [${this.ConnectorId}] State set [${this.State}] || ZoneId: [${this.ZoneId}]`)
 
       AZM.Status.Audio.Zone[this.ZoneId].setConnectorState(this.ConnectorId, this.State, this.ZoneId).then(() => {
+        if (!bucketIsActive(this)) return;
         const payload = {
           Zone: {
             Label: this.Label,
@@ -766,6 +806,7 @@ class ExternalGate_Bucket extends Base_AudioBucket {
     console.AZM[`${this.audioConnectorType}_BucketDebug`](`[${this.audioConnectorType}] ConnectorId [${this.ConnectorId}] State set [${this.State}] || ZoneId: [${this.ZoneId}]`);
 
     AZM.Status.Audio.Zone[this.ZoneId].setConnectorState(this.ConnectorId, this.State, this.ZoneId).then(() => {
+      if (!bucketIsActive(this)) return;
       const payload = {
         Zone: {
           Label: this.Label,
@@ -1171,23 +1212,23 @@ function setBucketAudioThresholds(zoneId, audioConfiguration, bucketType) {
   let highThresh;
 
   if (audioConfiguration.Settings.GlobalThreshold.Mode.toLowerCase() == 'on') {
-    lowThresh = audioConfiguration.Settings.GlobalThreshold.Low.clone();
-    highThresh = audioConfiguration.Settings.GlobalThreshold.High.clone();
+    lowThresh = deepClone(audioConfiguration.Settings.GlobalThreshold.Low);
+    highThresh = deepClone(audioConfiguration.Settings.GlobalThreshold.High);
     console.AZM[`${bucketType}_BucketDebug`](`Global Threshold set on ZoneId [${zoneId}] || ConnectorType [${bucketType}] || Thresholds >> High [${highThresh}] || Low [${lowThresh}]`);
     return { High: highThresh, Low: lowThresh };
   }
 
   if (parseInt(audioConfiguration.Zones[zoneId - 1].Independent_Threshold.Low) > 0 || parseInt(audioConfiguration.Zones[zoneId - 1].Independent_Threshold.High) > 0) {
-    lowThresh = audioConfiguration.Zones[zoneId - 1].Independent_Threshold.Low.clone();
-    highThresh = audioConfiguration.Zones[zoneId - 1].Independent_Threshold.High.clone();
+    lowThresh = deepClone(audioConfiguration.Zones[zoneId - 1].Independent_Threshold.Low);
+    highThresh = deepClone(audioConfiguration.Zones[zoneId - 1].Independent_Threshold.High);
     console.AZM[`${bucketType}_BucketDebug`](`Independent Threshold set on ZoneId [${zoneId}] || ConnectorType [${bucketType}] || Thresholds >> High [${highThresh}] || Low [${lowThresh}]`);
     return { High: highThresh, Low: lowThresh };
   }
 
   if (audioConfiguration.Zones[zoneId - 1].Independent_Threshold.High == undefined || audioConfiguration.Zones[zoneId - 1].Independent_Threshold.Low == undefined) {
     if (audioConfiguration.Settings.GlobalThreshold.Low != undefined || audioConfiguration.Settings.GlobalThreshold.High != undefined) {
-      lowThresh = audioConfiguration.Settings.GlobalThreshold.Low.clone();
-      highThresh = audioConfiguration.Settings.GlobalThreshold.High.clone();
+      lowThresh = deepClone(audioConfiguration.Settings.GlobalThreshold.Low);
+      highThresh = deepClone(audioConfiguration.Settings.GlobalThreshold.High);
       console.AZM[`${bucketType}_BucketDebug`](`Independent Threshold not found, reverting to Global Threshold set on ZoneId [${zoneId}] || ConnectorType [${bucketType}] || Thresholds >> High [${highThresh}] || Low [${lowThresh}]`);
       return { High: highThresh, Low: lowThresh };
     } else {
@@ -1213,7 +1254,7 @@ function Process_BIN_Data(dataset) {
   const sum = dataset.reduce((acc, value) => parseInt(acc) + parseInt(value), 0);
   const avg = Math.round((sum / AudioConfiguration.Settings.Sample.Size))
   const peak = Math.max(...dataset);
-  return { Average: avg, Peak: peak, Sample: dataset.clone() }
+  return { Average: avg, Peak: peak, Sample: deepClone(dataset) }
 }
 
 /**
@@ -1228,12 +1269,11 @@ function Process_BIN_Data(dataset) {
  */
 async function discoverEthernetStreamNameBySerial(serial) {
   const peripherals = await xapi.Status.Peripherals.ConnectedDevice.get()
+  return discoverEthernetStreamNameBySerialFromPeripherals(serial, peripherals);
+}
 
-  // const streamName = peripherals.find(item => item.Name.includes('Microphone') && item.SerialNumber === serial);
-
-  // Thank you Mark Lula for finding this bug :)
-  const streamName = peripherals.find(item => item.Type === 'AudioMicrophone' && item.SerialNumber === serial);
-
+function discoverEthernetStreamNameBySerialFromPeripherals(serial, peripherals) {
+  const streamName = (peripherals || []).find(item => item.Type === 'AudioMicrophone' && item.SerialNumber === serial);
   return streamName ? streamName.ID : null;
 }
 
@@ -1250,62 +1290,107 @@ async function discoverEthernetStreamNameBySerial(serial) {
  * 
  */
 async function Append_Ethernet_ConnectorId_By_StreamName() {
-  const mics = await xapi.Status.Audio.Input.Connectors.Ethernet.get();
+  const resolution = { Sources: [], Diagnostics: [] };
+  let mics = [];
+  let peripherals = [];
+  try {
+    mics = await xapi.Status.Audio.Input.Connectors.Ethernet.get() || [];
+  } catch (error) {
+    resolution.Diagnostics.push({
+      Code: 'ETHERNET_DISCOVERY_UNAVAILABLE',
+      Health: 'pending',
+      Error: error && error.message ? error.message : String(error)
+    });
+  }
 
-  for (let index = 0; index < AudioConfiguration.Zones.length; index++) {
-    const zone = AudioConfiguration.Zones[index];
-
-    if (zone.MicrophoneAssignment.Type.toLowerCase() == 'ethernet' || zone.MicrophoneAssignment.Type.toLowerCase() == 'aes67') {
-      for (let i = 0; i < zone.MicrophoneAssignment.Connectors.length; i++) {
-        const conx = zone.MicrophoneAssignment.Connectors[i];
-
-        if ((conx?.Serial == '' && conx?.Serial != undefined) || (conx?.StreamName == '' && conx?.StreamName == undefined)) {
-          checkZoneSetup(`Zone Index [${index}] has an invalid Ethernet Microphone Configuration`);
-        }
-
-        let serialMatchList = {};
-        let streamNameMatchList = {};
-        for (const mic of mics) {
-          if (mic.StreamName == conx.StreamName) {
-            console.AZM.SetupDebug(`StreamName match on Zone Index [${index}], assigning Ethernet ConnectorId [${parseInt(mic.id)}] to Audio Zone Configuration`);
-            AudioConfiguration.Zones[index].MicrophoneAssignment.Connectors[i].Id = parseInt(mic.id);
-            streamNameMatchList[conx.StreamName] = 'found'
-          } else {
-            if (streamNameMatchList[conx.StreamName] != 'found') {
-              if (conx.StreamName) {
-                streamNameMatchList[conx.StreamName] = 'missing'
-              }
-            }
-            const streamName = await discoverEthernetStreamNameBySerial(conx.Serial);
-            if (mic.StreamName == streamName) {
-              console.AZM.SetupDebug(`StreamName match by Serial Lookup on Zone Index [${index}], assigning Ethernet ConnectorId [${parseInt(mic.id)}] to Audio Zone Configuration`);
-              AudioConfiguration.Zones[index].MicrophoneAssignment.Connectors[i].Id = parseInt(mic.id);
-              serialMatchList[conx.Serial] = 'found';
-              streamNameMatchList[conx.StreamName] = 'found';
-            } else {
-              if (serialMatchList[conx.Serial] != 'found') {
-                if (conx.Serial) {
-                  serialMatchList[conx.Serial] = 'missing';
-                }
-              }
-            }
-          }
-        }
-        const micSerialList = Object.keys(serialMatchList)
-        const micStreamNameList = Object.keys(streamNameMatchList)
-        micSerialList.forEach(element => {
-          if (serialMatchList[element] == 'missing') {
-            throw new AZM_Error(`Unable to find a Serial Match for [Ethernet] Microphone [${element}, please review the config object you passed into the AZM.Command.Zone.Setup() function`)
-          }
-        })
-        micStreamNameList.forEach(element => {
-          if (streamNameMatchList[element] == 'missing') {
-            throw new AZM_Error(`Unable to find a StreamName Match for [AES67] Microphone [${element}], please review the config object you passed into the AZM.Command.Zone.Setup() function`)
-          }
-        })
-      }
+  const serials = [];
+  AudioConfiguration.Zones.forEach(zone => {
+    if (zone.MicrophoneAssignment.Type.toLowerCase() === 'ethernet') {
+      zone.MicrophoneAssignment.Connectors.forEach(connector => {
+        if (connector.Serial) serials.push(connector.Serial);
+      });
+    }
+  });
+  if (serials.length) {
+    try {
+      peripherals = await xapi.Status.Peripherals.ConnectedDevice.get() || [];
+    } catch (error) {
+      resolution.Diagnostics.push({
+        Code: 'ETHERNET_SERIAL_DISCOVERY_UNAVAILABLE',
+        Health: 'pending',
+        Error: error && error.message ? error.message : String(error)
+      });
     }
   }
+
+  const serialToStream = new Map();
+  serials.forEach(serial => {
+    const streamName = discoverEthernetStreamNameBySerialFromPeripherals(serial, peripherals);
+    if (streamName) serialToStream.set(serial, streamName);
+  });
+
+  AudioConfiguration.Zones.forEach((zone, zoneIndex) => {
+    const type = zone.MicrophoneAssignment.Type.toLowerCase();
+    if (type !== 'ethernet' && type !== 'aes67') return;
+
+    zone.MicrophoneAssignment.Connectors.forEach((connector, connectorIndex) => {
+      const selector = {
+        Serial: connector.Serial,
+        StreamName: connector.StreamName
+      };
+      const hasSerial = typeof connector.Serial === 'string' && connector.Serial.trim() !== '';
+      const hasStreamName = typeof connector.StreamName === 'string' && connector.StreamName.trim() !== '';
+      if (!hasSerial && !hasStreamName) {
+        const diagnostic = {
+          Code: 'INVALID_SOURCE_SELECTOR',
+          Health: 'invalid',
+          ZoneId: zoneIndex + 1,
+          Zone: zone.Label || `ZoneIndex_${zoneIndex}`,
+          Source: selector,
+          Tip: 'Provide a non-empty Serial or StreamName for the Ethernet connector.'
+        };
+        console.AZM.error(diagnostic);
+        throw new AZM_Error(JSON.stringify(diagnostic));
+      }
+
+      const serialStreamName = hasSerial ? serialToStream.get(connector.Serial) : undefined;
+      const streamName = hasStreamName ? connector.StreamName : serialStreamName;
+      const match = mics.find(mic => mic.StreamName == streamName);
+      const health = match
+        ? 'ready'
+        : (AudioConfiguration.Settings.MissingSourcePolicy || 'pending').toLowerCase() === 'unavailable'
+          ? 'unavailable'
+          : 'pending';
+      const source = {
+        Key: match
+          ? `${canonicalAudioType(type)}:${parseInt(match.id)}`
+          : `${canonicalAudioType(type)}:${hasSerial ? `serial:${connector.Serial}` : `stream:${connector.StreamName}`}`,
+        Type: type === 'aes67' ? 'AES67' : 'Ethernet',
+        ZoneId: zoneIndex + 1,
+        ConnectorIndex: connectorIndex,
+        Selector: selector,
+        Health: health,
+        Id: match ? parseInt(match.id) : undefined,
+        StreamName: streamName
+      };
+      if (match) {
+        connector.Id = parseInt(match.id);
+        console.AZM.SetupDebug(`Resolved [${source.Type}] source for Zone [${zoneIndex + 1}] to ConnectorId [${connector.Id}]`);
+      } else {
+        delete connector.Id;
+        resolution.Diagnostics.push({
+          Code: 'SOURCE_PENDING',
+          Health: health,
+          ZoneId: zoneIndex + 1,
+          Zone: zone.Label || `ZoneIndex_${zoneIndex}`,
+          Source: selector,
+          Tip: 'AZM will retry Ethernet source resolution when RoomOS reports a stream change.'
+        });
+      }
+      resolution.Sources.push(source);
+    });
+  });
+  return resolution;
 }
 
 /** Parses Audio Configuration and builds a list of audio input connector IDs
@@ -1319,14 +1404,18 @@ async function Append_Ethernet_ConnectorId_By_StreamName() {
 */
 function discover_Audio_Connector_Info() {
   console.AZM.SetupDebug('Starting Audio Connector Info Discovery')
-  let connector_Id_Arr = []
+  const connector_Id_Arr = [];
+  const seen = new Set();
   AudioConfiguration.Zones.forEach((element) => {
     element.MicrophoneAssignment.Connectors.forEach(el => {
+      if (el.Id === undefined || el.Id === null) return;
+      const key = `${canonicalAudioType(element.MicrophoneAssignment.Type)}:${el.Id}`;
+      if (seen.has(key)) return;
+      seen.add(key);
       connector_Id_Arr.push({ Id: el.Id, Type: element.MicrophoneAssignment.Type })
     })
   })
-  connector_Id_Arr = [...new Set(connector_Id_Arr)];
-  connector_Id_Arr = connector_Id_Arr.sort(function (a, b) { return a - b; });
+  connector_Id_Arr.sort((a, b) => String(a.Type).localeCompare(String(b.Type)) || Number(a.Id) - Number(b.Id));
   console.AZM.SetupDebug(`Audio Connector Discovery Id Complete. Discovered Connections > [${JSON.stringify(connector_Id_Arr)}]`)
   return connector_Id_Arr
 }
@@ -1350,6 +1439,95 @@ function discover_Audio_Connector_Types() {
   return connector_Type_Arr
 }
 
+function canonicalAudioType(type) {
+  switch (String(type).toLowerCase()) {
+    case 'microphone': case 'analog': return 'Analog';
+    case 'ethernet': case 'aes67': return 'Ethernet';
+    case 'usb': case 'usbmicrophone': return 'USB';
+    case 'externalvumeter': return 'ExternalVuMeter';
+    case 'externalgate': return 'ExternalGate';
+    default: return String(type);
+  }
+}
+
+function normalizeAudioConfiguration(audioZoneInfo) {
+  if (!audioZoneInfo || typeof audioZoneInfo !== 'object') {
+    throw new AZM_Error(JSON.stringify({
+      Code: 'INVALID_CONFIGURATION',
+      Cause: 'Audio Configuration Object was not provided.',
+      Tip: 'Pass an object containing Settings and Zones to AZM.Command.Zone.Setup().'
+    }));
+  }
+  if (!audioZoneInfo.Settings || typeof audioZoneInfo.Settings !== 'object' || !Array.isArray(audioZoneInfo.Zones)) {
+    throw new AZM_Error(JSON.stringify({
+      Code: 'INVALID_CONFIGURATION',
+      Cause: 'Audio Configuration must contain Settings and a Zones array.',
+      Tip: 'Review the AZM configuration examples.'
+    }));
+  }
+  if (!audioZoneInfo.Settings.Sample || !audioZoneInfo.Settings.GlobalThreshold) {
+    throw new AZM_Error(JSON.stringify({
+      Code: 'INVALID_CONFIGURATION',
+      Cause: 'Settings.Sample and Settings.GlobalThreshold are required.',
+      Tip: 'Review the AZM configuration examples.'
+    }));
+  }
+  if (!Number.isInteger(Number(audioZoneInfo.Settings.Sample.Size)) || Number(audioZoneInfo.Settings.Sample.Size) < 1) {
+    throw new AZM_Error(JSON.stringify({
+      Code: 'INVALID_CONFIGURATION',
+      Cause: 'Settings.Sample.Size must be a positive integer.'
+    }));
+  }
+  if (!audioZoneInfo.Zones.length) {
+    throw new AZM_Error(JSON.stringify({ Code: 'INVALID_CONFIGURATION', Cause: 'At least one Audio Zone is required.' }));
+  }
+
+  const configuration = deepClone(audioZoneInfo);
+  configuration.Zones.forEach((zone, index) => {
+    if (!zone || typeof zone !== 'object' || !zone.MicrophoneAssignment || typeof zone.MicrophoneAssignment !== 'object') {
+      throw new AZM_Error(JSON.stringify({
+        Code: 'INVALID_ZONE_CONFIGURATION',
+        ZoneId: index + 1,
+        Tip: 'Each zone must contain MicrophoneAssignment with Type and Connectors.'
+      }));
+    }
+    if (!zone.MicrophoneAssignment.Type || !Array.isArray(zone.MicrophoneAssignment.Connectors)) {
+      throw new AZM_Error(JSON.stringify({
+        Code: 'INVALID_ZONE_CONFIGURATION',
+        ZoneId: index + 1,
+        Zone: zone.Label,
+        Tip: 'MicrophoneAssignment.Type and MicrophoneAssignment.Connectors are required.'
+      }));
+    }
+    if (zone.Label === undefined || zone.Label === '') zone.Label = `ZoneIndex_${index}`;
+    zone.id = index + 1;
+    zone.StableId = zone.StableId || zone.LogicalId || zone.Key || zone.Label;
+  });
+  return configuration;
+}
+
+function deepClone(value) {
+  if (Array.isArray(value)) return value.map(item => deepClone(item));
+  if (value && typeof value === 'object') {
+    return Object.keys(value).reduce((clone, key) => {
+      clone[key] = deepClone(value[key]);
+      return clone;
+    }, {});
+  }
+  return value;
+}
+
+function createDiagnostic(entry) {
+  const diagnostic = { ...entry, Timestamp: new Date().toISOString() };
+  if (activeRuntime) activeRuntime.Diagnostics.push(diagnostic);
+  console.AZM.warn(diagnostic);
+  return diagnostic;
+}
+
+function bucketIsActive(bucket) {
+  return !bucket.Runtime || activeRuntime === bucket.Runtime;
+}
+
 
 /** This function evaluates the ZoneSetupStatus
     If this Status is false, it will throw an error with context to point
@@ -1370,57 +1548,103 @@ function checkZoneSetup(error) {
   
     This if called when AZM.Audio.Zone.Setup(AudioConfiguration) is run
 */
-function Instantiate_Audio_Zones_And_Buckets() {
-  AudioConfiguration.Zones.forEach((element, index) => {
-    if (AudioConfiguration.Zones[index].Label == undefined || AudioConfiguration.Zones[index].Label == '') {
-      AudioConfiguration.Zones[index].Label = `ZoneIndex_${index}`
-    }
-    AudioConfiguration.Zones[index]['id'] = index + 1;
-    console.AZM.SetupDebug(`Appending Zone Id [${index + 1}] to [${AudioConfiguration.Zones[index].Label}] || ZoneIndex: ${index}`)
-    AZM.Status.Audio.Zone[element.id] = new Zone_Tracker(element.id, element.Label, element.MicrophoneAssignment.Type, element.Assets)
-    switch (element.MicrophoneAssignment.Type.toLowerCase()) {
-      case 'ethernet': case 'aes67':
-        element.MicrophoneAssignment.Connectors.forEach(eth => {
-          let ethZoneMapId = `${element.id}:${eth.Id}`;
-          zoneConnectorMap.Ethernet.push(ethZoneMapId);
-          AudioBucket.Ethernet[ethZoneMapId] = new Ethernet_Bucket(eth.Id, eth.SubId, element.id, element.Label, element.Assets);
-          console.AZM.SetupDebug(`Zone [${element.id}] Instantiated; Type [${AudioBucket.Ethernet[ethZoneMapId].audioConnectorType}]: `, AudioBucket.Ethernet[ethZoneMapId])
-          AZM.Status.Audio.Zone[element.id].addConnector(eth.Id, AudioBucket.Ethernet[ethZoneMapId].State, element.id);
-        })
-        break;
-      case 'microphone': case 'analog':
-        element.MicrophoneAssignment.Connectors.forEach(ano => {
-          AudioBucket.Analog[ano.Id] = new Analog_Bucket(ano.Id, element.id, element.Label, element.Assets);
-          console.AZM.SetupDebug(`Zone [${element.id}] Instantiated; Type [${AudioBucket.Analog[ano.Id].audioConnectorType}]: `, AudioBucket.Analog[ano.Id])
-          AZM.Status.Audio.Zone[element.id].addConnector(ano.Id, AudioBucket.Analog[ano.Id].State, element.id);
-        })
-        break;
-      case 'usb':
-        element.MicrophoneAssignment.Connectors.forEach(usb => {
-          AudioBucket.USB[usb.Id] = new USB_Bucket(usb.Id, element.id, element.Label, element.Assets);
-          console.AZM.SetupDebug(`Zone [${element.id}] Instantiated; Type [${AudioBucket.USB[usb.Id].audioConnectorType}]: `, AudioBucket.USB[usb.Id])
-          AZM.Status.Audio.Zone[element.id].addConnector(usb.Id, AudioBucket.USB[usb.Id].State, element.id);
-        })
-        break;
-      case 'externalvumeter':
-        element.MicrophoneAssignment.Connectors.forEach(extV => {
-          AudioBucket.ExternalVuMeter[extV.Id] = new ExternalVuMeter_Bucket(extV.Id, element.id, element.Label, element.Assets, element.ControllerId);
-          console.AZM.SetupDebug(`Zone [${element.id}] Instantiated; Type [${AudioBucket.ExternalVuMeter[extV.Id].audioConnectorType}]: `, AudioBucket.ExternalVuMeter[extV.Id])
-          AZM.Status.Audio.Zone[element.id].addConnector(extV.Id, AudioBucket.ExternalVuMeter[extV.Id].State, element.id);
-        })
-        break;
-      case 'externalgate':
-        element.MicrophoneAssignment.Connectors.forEach(extG => {
-          AudioBucket.ExternalGate[extG.Id] = new ExternalGate_Bucket(extG.Id, element.id, element.Label, element.Assets, element.ControllerId);
-          console.AZM.SetupDebug(`Zone [${element.id}] Instantiated; Type [${AudioBucket.ExternalGate[extG.Id].audioConnectorType}]: `, AudioBucket.ExternalGate[extG.Id])
-          AZM.Status.Audio.Zone[element.id].addConnector(extG.Id, AudioBucket.ExternalGate[extG.Id].State, element.id);
-        })
-        break;
-      default:
-        //Throw Error on unknown Microphone Assignment Type
-        throw new AZM_Error(JSON.stringify({ message: `Audio Connector Type [${element.MicrophoneAssignment.Type}] not accepted`, AllowedTypes: allowedAudioTypes }))
-    }
-  })
+function Instantiate_Audio_Zones_And_Buckets(configuration, resolution) {
+  const runtime = {
+    Configuration: configuration,
+    Zones: {},
+    Buckets: { Ethernet: {}, Analog: {}, USB: {}, ExternalVuMeter: {}, ExternalGate: {} },
+    Routes: { Ethernet: {}, Analog: {}, USB: {}, ExternalVuMeter: {}, ExternalGate: {} },
+    Sources: {},
+    Diagnostics: [...(resolution ? resolution.Diagnostics : [])],
+    EthernetSubIds: new Set()
+  };
+  const sourceByZoneAndIndex = new Map((resolution ? resolution.Sources : []).map(source => [`${source.ZoneId}:${source.ConnectorIndex}`, source]));
+
+  configuration.Zones.forEach((element, index) => {
+    const zoneId = index + 1;
+    const zone = new Zone_Tracker(zoneId, element.Label, element.MicrophoneAssignment.Type, element.Assets, element.StableId);
+    runtime.Zones[zoneId] = zone;
+    const type = element.MicrophoneAssignment.Type.toLowerCase();
+    element.MicrophoneAssignment.Connectors.forEach((connector, connectorIndex) => {
+      const source = sourceByZoneAndIndex.get(`${zoneId}:${connectorIndex}`) || {
+        Key: `${canonicalAudioType(type)}:${connector.Id}`,
+        Type: element.MicrophoneAssignment.Type,
+        ZoneId: zoneId,
+        ConnectorIndex: connectorIndex,
+        Selector: { Id: connector.Id },
+        Health: 'ready',
+        Id: connector.Id
+      };
+      if (type === 'ethernet' || type === 'aes67') {
+        (connector.SubId || []).forEach(subId => runtime.EthernetSubIds.add(String(subId)));
+      }
+      const bucketKey = `${zoneId}:${connector.Id === undefined ? `unresolved:${connectorIndex}` : connector.Id}`;
+      let bucket;
+      switch (type) {
+        case 'ethernet': case 'aes67':
+          if (source.Health === 'ready') bucket = new Ethernet_Bucket(connector.Id, connector.SubId || [], zoneId, element.Label, element.Assets, configuration);
+          break;
+        case 'microphone': case 'analog':
+          bucket = new Analog_Bucket(connector.Id, zoneId, element.Label, element.Assets, configuration);
+          break;
+        case 'usb':
+          bucket = new USB_Bucket(connector.Id, zoneId, element.Label, element.Assets, configuration);
+          break;
+        case 'externalvumeter':
+          bucket = new ExternalVuMeter_Bucket(connector.Id, zoneId, element.Label, element.Assets, element.ControllerId, configuration);
+          break;
+        case 'externalgate':
+          bucket = new ExternalGate_Bucket(connector.Id, zoneId, element.Label, element.Assets, element.ControllerId, configuration);
+          break;
+        default:
+          throw new AZM_Error(JSON.stringify({ message: `Audio Connector Type [${element.MicrophoneAssignment.Type}] not accepted`, AllowedTypes: allowedAudioTypes, ZoneId: zoneId }));
+      }
+      const canonicalType = type === 'ethernet' || type === 'aes67'
+        ? 'Ethernet'
+        : type === 'microphone' || type === 'analog'
+          ? 'Analog'
+          : type === 'usb'
+            ? 'USB'
+            : type === 'externalvumeter'
+              ? 'ExternalVuMeter'
+              : 'ExternalGate';
+      const connectorState = bucket ? bucket.State : 'Unset';
+      zone.addConnector(connector.Id, connectorState, zoneId, {
+        SourceHealth: source.Health,
+        SourceKey: source.Key,
+        Selector: source.Selector
+      });
+      runtime.Sources[source.Key] = source;
+      if (bucket) {
+        bucket.Runtime = runtime;
+        runtime.Buckets[canonicalType][bucketKey] = bucket;
+        if (!runtime.Routes[canonicalType][connector.Id]) runtime.Routes[canonicalType][connector.Id] = [];
+        runtime.Routes[canonicalType][connector.Id].push(bucket);
+      }
+    });
+  });
+  return runtime;
+}
+
+function replaceObjectContents(target, source) {
+  Object.keys(target).forEach(key => delete target[key]);
+  Object.assign(target, source);
+}
+
+function activateRuntime(runtime) {
+  activeRuntime = runtime;
+  AudioConfiguration = runtime.Configuration;
+  replaceObjectContents(AZM.Status.Audio.Zone, runtime.Zones);
+  replaceObjectContents(AZM.Status.Audio.Source, runtime.Sources);
+  AZM.Status.Audio.Diagnostics = runtime.Diagnostics;
+  replaceObjectContents(AudioBucket.Ethernet, runtime.Buckets.Ethernet);
+  replaceObjectContents(AudioBucket.Analog, runtime.Buckets.Analog);
+  replaceObjectContents(AudioBucket.USB, runtime.Buckets.USB);
+  replaceObjectContents(AudioBucket.ExternalVuMeter, runtime.Buckets.ExternalVuMeter);
+  replaceObjectContents(AudioBucket.ExternalGate, runtime.Buckets.ExternalGate);
+  zoneConnectorMap.Ethernet = Object.keys(runtime.Buckets.Ethernet);
+  Ethernet_SubId_Backfill = {};
+  ZoneSetupStatus = true;
 }
 
 /**
@@ -1434,15 +1658,18 @@ function Instantiate_Audio_Zones_And_Buckets() {
  * @link [xEvent Audio Input Connectors Ethernet](https://roomos.cisco.com/xapi/Event.Audio.Input.Connectors/)
 */
 function Normalize_Ethernet_Audio_Data(payload) {
-  const { SubId, id } = payload;
+  const id = payload.id;
+  const SubId = Array.isArray(payload.SubId) ? payload.SubId.map(item => ({ ...item })) : [];
   if (!Ethernet_SubId_Backfill[id]) {
     Ethernet_SubId_Backfill[id] = {};
   }
 
-  for (let i = 1; i <= 8; i++) {
-    const subId = i.toString();
+  const configuredSubIds = activeRuntime ? [...activeRuntime.EthernetSubIds] : [];
+  const observedSubIds = SubId.map(item => String(item.id));
+  const expectedSubIds = configuredSubIds.length ? configuredSubIds : observedSubIds;
+  expectedSubIds.forEach(subId => {
 
-    const idExists = SubId.some(item => item.id === subId);
+    const idExists = SubId.some(item => String(item.id) === String(subId));
 
     if (!idExists) {
       const previousSample = Ethernet_SubId_Backfill[id][subId];
@@ -1453,7 +1680,7 @@ function Normalize_Ethernet_Audio_Data(payload) {
         SubId.push({ LoudspeakerActivity: '0', NoiseLevel: '0', PPMeter: '0', VuMeter: '0', id: subId, });
       };
     };
-  };
+  });
 
   SubId.sort((a, b) => parseInt(a.id, 10) - parseInt(b.id, 10));
 
@@ -1463,7 +1690,7 @@ function Normalize_Ethernet_Audio_Data(payload) {
     return acc;
   }, {});
 
-  return { SubId, id, };
+  return { ...payload, SubId, id };
 }
 
 /**
@@ -1475,70 +1702,116 @@ function Normalize_Ethernet_Audio_Data(payload) {
  * @see ExternalGate_Bucket
  * @xapi [xEvent Message Send](https://roomos.cisco.com/xapi/Event.Message.Send/)
  */
-function startExternalSubscription(callBack) {
-  startExternalSubscription = function () {
-    console.AZM.SetupDebug('Stopped Duplicate External subscription from activating')
-  }
-  xapi.Event.Message.Send.on(extEvent => {
-    console.AZM.MessageSendEvent_Debug('Raw Message Send Text:', extEvent.Text)
-    if (extEvent.Text.includes(`"Service":"AudioZoneManager"`)) {
+function addTrackZoneCallback(callback) {
+  if (typeof callback === 'function') trackZoneCallbacks.add(callback);
+}
 
-      let payload = '';
-      try {
-        payload = JSON.parse(extEvent.Text)
-        if (payload.Service == 'AudioZoneManager') {
-          console.AZM.MessageSendEvent_Debug(`Passing Message Send payload into [${payload.SourceType}], Payload:`, payload);
-          try {
-            switch (payload.SourceType.toLowerCase()) {
-              case 'externalvumeter':
-                if (AudioBucket.ExternalVuMeter[payload.MicrophoneId].ControllerId == payload.ControllerId) {
-                  AudioBucket.ExternalVuMeter[payload.MicrophoneId].run(payload.VuMeter, callBack);
-                } else {
-                  console.AZM.MessageSendEvent_Debug(`Unknown External ControllerId [${payload.ControllerId}] sent payload:`, JSON.stringify(payload))
-                }
-                break;
-              case 'externalgate':
-                if (AudioBucket.ExternalGate[payload.MicrophoneId].ControllerId == payload.ControllerId) {
-                  AudioBucket.ExternalGate[payload.MicrophoneId].run(payload.Gate, callBack);
-                } else {
-                  console.AZM.MessageSendEvent_Debug(`Unknown External ControllerId [${payload.ControllerId}] sent payload:`, JSON.stringify(payload))
-                }
-                break;
-            }
-          } catch (e) {
-            if (e != `TypeError: cannot read property 'ControllerId' of undefined`) {
-              console.AZM.error(e)
-            } else {
-              console.AZM.MessageSendEvent_Debug(`Unknown External MicrophoneId [${payload.MicrophoneId}] sent in payload:`, JSON.stringify(payload))
-            }
-          }
-        }
-      } catch (e) {
-        let err = {
-          Context: `AZM service detected in External Payload but failed to parse`,
-          Tip: 'Make sure to prepare your external payload as a Stringified JSON Object',
-          IncomingPayload: extEvent,
-          ...e
-        }
-        console.AZM.error(err)
-      }
-    }
+function dispatchBucketEvent(type, connectorId, data) {
+  const routes = activeRuntime && activeRuntime.Routes[type] ? activeRuntime.Routes[type][connectorId] : undefined;
+  if (!routes || !routes.length) {
+    createDiagnostic({ Code: 'UNMATCHED_CONNECTOR_EVENT', Type: type, ConnectorId: connectorId, Payload: data });
+    return;
+  }
+  routes.forEach(bucket => {
+    trackZoneCallbacks.forEach(callback => bucket.run(data, callback));
   });
-  console.AZM.info(`Subscription started for [xapi.Event.Message.Send] => Used for External Audio Data`);
-};
+}
+
+function dispatchExternalEvent(payload) {
+  const type = String(payload.SourceType || '').toLowerCase() === 'externalvumeter' ? 'ExternalVuMeter' : 'ExternalGate';
+  const routes = activeRuntime && activeRuntime.Routes[type] ? activeRuntime.Routes[type][payload.MicrophoneId] : undefined;
+  if (!routes || !routes.length) {
+    createDiagnostic({ Code: 'UNMATCHED_EXTERNAL_EVENT', Type: type, ConnectorId: payload.MicrophoneId, ControllerId: payload.ControllerId, Payload: payload });
+    return;
+  }
+  const matchingRoutes = routes.filter(bucket => bucket.ControllerId == payload.ControllerId);
+  if (!matchingRoutes.length) {
+    createDiagnostic({ Code: 'EXTERNAL_CONTROLLER_MISMATCH', Type: type, ConnectorId: payload.MicrophoneId, ControllerId: payload.ControllerId, Payload: payload });
+    return;
+  }
+  matchingRoutes.forEach(bucket => {
+    const data = type === 'ExternalVuMeter' ? payload.VuMeter : payload.Gate;
+    trackZoneCallbacks.forEach(callback => bucket.run(data, callback));
+  });
+}
+
+function ensureEventSubscription(family) {
+  if (eventSubscriptions[family]) return;
+  switch (family) {
+    case 'Ethernet':
+      xapi.Event.Audio.Input.Connectors.Ethernet.on(event => {
+        console.AZM.AudioInputConnectorEvent_Debug('Raw Audio Ethernet Input Connector Payload:', event);
+        try {
+          dispatchBucketEvent('Ethernet', event.id, Normalize_Ethernet_Audio_Data(event));
+        } catch (error) {
+          createDiagnostic({ Code: 'ETHERNET_EVENT_PROCESSING_FAILED', ConnectorId: event && event.id, Error: error && error.message ? error.message : String(error) });
+        }
+      });
+      eventSubscriptions.Ethernet = true;
+      console.AZM.info(`Subscription started for [xapi.Event.Audio.Input.Connectors.Ethernet]`);
+      break;
+    case 'Microphone':
+      xapi.Event.Audio.Input.Connectors.Microphone.on(event => {
+        console.AZM.AudioInputConnectorEvent_Debug('Raw Audio Analog Input Connector Payload:', event);
+        try { dispatchBucketEvent('Analog', event.id, event); }
+        catch (error) { createDiagnostic({ Code: 'ANALOG_EVENT_PROCESSING_FAILED', ConnectorId: event && event.id, Error: error && error.message ? error.message : String(error) }); }
+      });
+      eventSubscriptions.Microphone = true;
+      console.AZM.info(`Subscription started for [xapi.Event.Audio.Input.Connectors.Microphone]`);
+      break;
+    case 'USBMicrophone':
+      xapi.Event.Audio.Input.Connectors.USBMicrophone.on(event => {
+        console.AZM.AudioInputConnectorEvent_Debug('Raw Audio USB Input Connector Payload:', event);
+        try { dispatchBucketEvent('USB', event.id, event); }
+        catch (error) { createDiagnostic({ Code: 'USB_EVENT_PROCESSING_FAILED', ConnectorId: event && event.id, Error: error && error.message ? error.message : String(error) }); }
+      });
+      eventSubscriptions.USBMicrophone = true;
+      console.AZM.info(`Subscription started for [xapi.Event.Audio.Input.Connectors.USBMicrophone]`);
+      break;
+    case 'MessageSend':
+      xapi.Event.Message.Send.on(event => {
+        console.AZM.MessageSendEvent_Debug('Raw Message Send Text:', event.Text);
+        let payload;
+        try { payload = JSON.parse(event.Text); }
+        catch (error) {
+          if (String(event.Text).includes('AudioZoneManager')) createDiagnostic({ Code: 'EXTERNAL_PAYLOAD_PARSE_FAILED', Error: error.message, IncomingPayload: event });
+          return;
+        }
+        if (payload && payload.Service === 'AudioZoneManager') dispatchExternalEvent(payload);
+      });
+      eventSubscriptions.MessageSend = true;
+      console.AZM.info(`Subscription started for [xapi.Event.Message.Send] => Used for External Audio Data`);
+      break;
+    case 'VoiceActivity':
+      xapi.Status.Audio.Microphones.VoiceActivityDetector.Activity.on(event => {
+        AZM.Status.VoiceActivity = event.toString().toLowerCase() === 'true';
+      });
+      eventSubscriptions.VoiceActivity = true;
+      console.AZM.info(`Subscription started for [xapi.Status.Audio.Microphones.VoiceActivityDetector.Activity]`);
+      break;
+    case 'EthernetStreamName':
+      xapi.Status.Audio.Input.Connectors.Ethernet['*'].StreamName.on(async () => {
+        if (!AudioConfiguration) return;
+        try { await AZM.Command.Zone.Setup(AudioConfiguration); }
+        catch (error) { createDiagnostic({ Code: 'SOURCE_RETRY_FAILED', Error: error && error.message ? error.message : String(error) }); }
+      });
+      eventSubscriptions.EthernetStreamName = true;
+      console.AZM.info(`Subscription started for [xapi.Status.Audio.Input.Connectors.Ethernet['*'].StreamName]`);
+      break;
+  }
+}
 
 /*****[Exported Function Objects]***********************************************************/
 
 AZM.Command.Zone.Setup = async function (AudioZoneInfo) {
   buildDebugFlagLogLevels();
   console.AZM.info('Initializing Audio Zone Manager (AZM_Lib)...')
-  if (AudioZoneInfo.Settings == undefined || AudioZoneInfo.Zones == undefined) {
-    checkZoneSetup('Audio Configuration Object not Provided or Formatted Properly')
-  }
+  const configuration = normalizeAudioConfiguration(AudioZoneInfo);
+  const previousConfiguration = AudioConfiguration;
 
   //Checks to see if the Voice Activity Detection object is available in the Audio Settings
-  if ('VoiceActivityDetection' in AudioZoneInfo.Settings) {
-    switch (AudioZoneInfo.Settings.VoiceActivityDetection.toString().toLowerCase()) {
+  if ('VoiceActivityDetection' in configuration.Settings) {
+    switch (configuration.Settings.VoiceActivityDetection.toString().toLowerCase()) {
       case 'true': case 'on':
         allowVoiceActivityDetection = true;
         AZM.Status.VoiceActivity = false;
@@ -1564,8 +1837,8 @@ AZM.Command.Zone.Setup = async function (AudioZoneInfo) {
     }
   }
 
-  if ('Mode' in AudioZoneInfo.Settings.Sample) {
-    switch (AudioZoneInfo.Settings.Sample.Mode.toLowerCase()) {
+  if ('Mode' in configuration.Settings.Sample) {
+    switch (configuration.Settings.Sample.Mode.toLowerCase()) {
       case 'snapshot': case 'segment': case 'segmented':
         audioSamplingMode = 'Snapshot'
         break;
@@ -1573,28 +1846,37 @@ AZM.Command.Zone.Setup = async function (AudioZoneInfo) {
         audioSamplingMode = 'Rolling'
         break;
       default:
-        console.AZM.warn(`Unidentified Processing Profile detected in script [${AudioZoneInfo.Settings.Sample.Mode}]. Setting Default: Snapshot`);
+        console.AZM.warn(`Unidentified Processing Profile detected in script [${configuration.Settings.Sample.Mode}]. Setting Default: Snapshot`);
         break;
     }
   }
 
   console.AZM.info(`Audio Sample Mode [${audioSamplingMode}]`)
 
-  //Clone the Audio Configuration Object passed to us
-  AudioConfiguration = AudioZoneInfo.clone();
-
   //Assign ConnectorIds to any ethernet microphones within scope
+  AudioConfiguration = configuration;
   const micTypes = discover_Audio_Connector_Types();
+  let resolution = { Sources: [], Diagnostics: [] };
+  try {
+    if (micTypes.some(type => type === 'ethernet') || micTypes.some(type => type === 'aes67')) {
+      resolution = await Append_Ethernet_ConnectorId_By_StreamName();
+    }
 
-  if (micTypes.includish('ethernet') || micTypes.includish('aes67')) {
-    await Append_Ethernet_ConnectorId_By_StreamName();
+    // Build a complete candidate graph without touching the active maps.
+    const candidateRuntime = Instantiate_Audio_Zones_And_Buckets(configuration, resolution);
+    candidateRuntime.Diagnostics.forEach(diagnostic => console.AZM.warn(diagnostic));
+    activateRuntime(candidateRuntime);
+    if (micTypes.some(type => type === 'ethernet') || micTypes.some(type => type === 'aes67')) {
+      try {
+        ensureEventSubscription('EthernetStreamName');
+      } catch (error) {
+        createDiagnostic({ Code: 'SOURCE_RETRY_SUBSCRIPTION_FAILED', Error: error && error.message ? error.message : String(error) });
+      }
+    }
+  } catch (error) {
+    AudioConfiguration = previousConfiguration;
+    throw error;
   }
-
-  //Instantiate Audio Zone and Bucket Classes
-  Instantiate_Audio_Zones_And_Buckets();
-
-  //Set ZoneSetupStatus true, to allow developer access to the libraries tools
-  ZoneSetupStatus = true;
 
   if (config_AutomaticUpdates_Mode.toLocaleLowerCase() != 'off') {
 
@@ -1617,7 +1899,7 @@ AZM.Command.Zone.Setup = async function (AudioZoneInfo) {
     })
   }
 
-  console.AZM.info(`AZM Ready! Version: [${version}]`);
+  console.AZM.info(`AZM Ready! Version: [${version}]${resolution.Diagnostics.length ? ' (pending/degraded sources reported)' : ''}`);
 };
 
 AZM.Command.Zone.Monitor.Start = async function (cause = undefined) {
@@ -1683,7 +1965,7 @@ AZM.Command.Zone.Monitor.Stop = async function (cause = undefined) {
       await xapi.Command.Audio.VuMeter.Stop({ ConnectorId: inputConnectors[i].Id, ConnectorType: typeFix });
     }
   };
-  console.AZM.log(`AZM Monitoring Started${cause ? `. Cause: [${cause}]` : ''}`);
+  console.AZM.log(`AZM Monitoring Stopped${cause ? `. Cause: [${cause}]` : ''}`);
 };
 
 AZM.Command.Zone.List = function () {
@@ -1699,78 +1981,31 @@ AZM.Command.Zone.List = function () {
 
 AZM.Event.TrackZones.on = function (callBack) {
   checkZoneSetup('Unable to subscribe to AZM.Event.TrackZones')
-  const types = discover_Audio_Connector_Types()
-
+  addTrackZoneCallback(callBack);
+  const types = discover_Audio_Connector_Types();
   types.forEach(element => {
     switch (element.toLowerCase()) {
       case 'ethernet': case 'aes67':
-        xapi.Event.Audio.Input.Connectors.Ethernet.on(ethernet_input_event => {
-          console.AZM.AudioInputConnectorEvent_Debug(`Raw Audio Ethernet Input Connector Payload:`, ethernet_input_event)
-          try {
-            const zonesToProcess = filterEthernetZoneMap(AudioBucket.Ethernet, ethernet_input_event.id)
-
-            zonesToProcess.forEach(mappedEthZone => {
-              AudioBucket.Ethernet[`${mappedEthZone.ZoneId}:${ethernet_input_event.id}`].run(Normalize_Ethernet_Audio_Data(ethernet_input_event), callBack)
-            })
-          } catch (e) {
-            if (e != `TypeError: cannot read property 'run' of undefined`) {
-              console.AZM.error(e)
-            }
-          }
-        })
-        console.AZM.info(`Subscription started for [xapi.Event.Audio.Input.Connectors.Ethernet]`)
-
-        xapi.Status.Audio.Input.Connectors.Ethernet['*'].StreamName.on(async () => {
-          if (!AudioConfiguration) {
-            return;
-          }
-          await AZM.Command.Zone.Setup(AudioConfiguration);
-        });
-        console.AZM.info(`Subscription started for [xapi.Status.Audio.Input.Connectors.Ethernet['*'].StreamName]`)
+        ensureEventSubscription('Ethernet');
+        ensureEventSubscription('EthernetStreamName');
         break;
       case 'microphone': case 'analog':
-        xapi.Event.Audio.Input.Connectors.Microphone.on(analog_input_event => {
-          console.AZM.AudioInputConnectorEvent_Debug(`Raw Audio Analog Input Connector Payload:`, analog_input_event)
-          try {
-            AudioBucket.Analog[analog_input_event.id].run(analog_input_event, callBack)
-          } catch (e) {
-            if (e != `TypeError: cannot read property 'run' of undefined`) {
-              console.AZM.error(e)
-            }
-          }
-        })
-        console.AZM.info(`Subscription started for [xapi.Event.Audio.Input.Connectors.Microphone]`)
-        break
+        ensureEventSubscription('Microphone');
+        break;
       case 'usb':
-        xapi.Event.Audio.Input.Connectors.USBMicrophone.on(usb_input_event => {
-          console.AZM.AudioInputConnectorEvent_Debug(`Raw Audio USB Input Connector Payload:`, usb_input_event)
-          try {
-            AudioBucket.USB[usb_input_event.id].run(usb_input_event, callBack)
-          } catch (e) {
-            if (e != `TypeError: cannot read property 'run' of undefined`) {
-              console.AZM.error(e)
-            }
-          }
-        })
-        console.AZM.info(`Subscription started for [xapi.Event.Audio.Input.Connectors.USBMicrophone]`)
+        ensureEventSubscription('USBMicrophone');
         break;
       case 'externalvumeter': case 'externalgate':
-        startExternalSubscription(callBack);
+        ensureEventSubscription('MessageSend');
         break;
       default:
         throw new AZM_Error(JSON.stringify({
           AZM_Error: `Unknown Microphone Input Type: [${element}]`,
           AllowedTypes: allowedAudioTypes
-        }))
+        }));
     }
-  })
-
-  if (allowVoiceActivityDetection) {
-    xapi.Status.Audio.Microphones.VoiceActivityDetector.Activity.on(voiceEvent => {
-      AZM.Status.VoiceActivity = voiceEvent.toString().toLowerCase() == 'true' ? true : false;
-    });
-    console.AZM.info(`Subscription started for [xapi.Status.Audio.Microphones.VoiceActivityDetector.Activity]`);
-  }
+  });
+  if (allowVoiceActivityDetection) ensureEventSubscription('VoiceActivity');
 };
 
 console.AZM.info(`Audio Zone Manager Library (AZM_Lib) Documentation -> https://github.com/ctg-tme/audio-zone-manager-library-macro/tree/main`);
